@@ -18,6 +18,7 @@ type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
  */
 export class RabbitMqUserCreatedConsumer {
   private handler: UserCreatedHandler | null = null;
+  private channel: amqp.Channel | null = null;
 
   constructor(private readonly connection: AmqpConnection) {}
 
@@ -26,28 +27,36 @@ export class RabbitMqUserCreatedConsumer {
   }
 
   async start(): Promise<void> {
-    const ch = await this.connection.createChannel();
-    await ch.assertExchange(EXCHANGE_USER_EVENTS, "topic", { durable: true });
-    await ch.assertQueue(QUEUE_USER_CREATED_CATALOG, { durable: true });
-    await ch.bindQueue(
+    this.channel = await this.connection.createChannel();
+    await this.channel.assertExchange(EXCHANGE_USER_EVENTS, "topic", { durable: true });
+    await this.channel.assertQueue(QUEUE_USER_CREATED_CATALOG, { durable: true });
+    await this.channel.bindQueue(
       QUEUE_USER_CREATED_CATALOG,
       EXCHANGE_USER_EVENTS,
       "user_created"
     );
 
-    await ch.consume(QUEUE_USER_CREATED_CATALOG, async (msg: ConsumeMessage | null) => {
-      if (!msg || !this.handler) return;
+    await this.channel.consume(QUEUE_USER_CREATED_CATALOG, async (msg: ConsumeMessage | null) => {
+      if (!msg || !this.handler || !this.channel) return;
       try {
         const body = JSON.parse(msg.content.toString());
         if (body.type === USER_CREATED_EVENT && body.payload) {
           const { userId, email, name } = body.payload;
           await this.handler({ userId, email, name });
         }
-        ch.ack(msg);
+        this.channel.ack(msg);
       } catch (err) {
         console.error("Error processing UserCreated:", err);
-        ch.nack(msg, false, true);
+        this.channel.nack(msg, false, true);
       }
     });
+  }
+
+  async close(): Promise<void> {
+    if (this.channel) {
+      await this.channel.close();
+      this.channel = null;
+    }
+    await this.connection.close();
   }
 }

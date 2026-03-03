@@ -1,6 +1,6 @@
 /**
  * Porta: serviço de cache (ex.: Redis).
- * Implementação em infrastructure/cache.
+ * Implementações em cada serviço ou via RedisCacheAdapter deste pacote.
  */
 export interface ICacheService {
   get<T>(key: string): Promise<T | null>;

@@ -1,5 +1,5 @@
 import Redis from "ioredis";
-import type { ICacheService } from "../../application/ports/cache.port";
+import type { ICacheService } from "./cache.port";
 
 /**
  * Adapter: implementação do cache com Redis.

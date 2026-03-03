@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { User } from "../../domain/entities/user.entity";
 import { Email } from "../../domain/value-objects/email.vo";
 import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
-import type { ICacheService } from "../ports/cache.port";
+import type { ICacheService } from "@lframework/shared";
 import type { IEventPublisher } from "../ports/event-publisher.port";
 import type { CreateUserDto } from "../dtos/create-user.dto";
 import { USER_CREATED_EVENT } from "@lframework/shared";

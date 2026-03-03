@@ -1,9 +1,8 @@
 import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
-import amqp from "amqplib";
+import { RedisCacheAdapter } from "@lframework/shared";
 import { PrismaItemRepository } from "./infrastructure/persistence/prisma-item.repository";
-import { RedisCacheAdapter } from "./infrastructure/cache/redis-cache.adapter";
-import { RabbitMqUserCreatedConsumer } from "./infrastructure/messaging/rabbitmq-user-created.consumer";
+import { RabbitMqUserEventsAdapter } from "./infrastructure/messaging/rabbitmq-user-events.adapter";
 import { CreateItemUseCase } from "./application/use-cases/create-item.use-case";
 import { ListItemsUseCase } from "./application/use-cases/list-items.use-case";
 import { ItemController } from "./infrastructure/http/item.controller";
@@ -28,7 +27,7 @@ export function createContainer(config: {
   const itemController = new ItemController(createItemUseCase, listItemsUseCase);
   const itemRoutes = createItemRoutes(itemController);
 
-  let userCreatedConsumer: RabbitMqUserCreatedConsumer;
+  const eventConsumer: RabbitMqUserEventsAdapter = new RabbitMqUserEventsAdapter(config.rabbitmqUrl);
 
   return {
     prisma,
@@ -41,12 +40,11 @@ export function createContainer(config: {
         name: string;
       }) => Promise<void>
     ): Promise<void> {
-      const rabbitConnection = await amqp.connect(config.rabbitmqUrl);
-      userCreatedConsumer = new RabbitMqUserCreatedConsumer(rabbitConnection);
-      userCreatedConsumer.onUserCreated(userCreatedHandler);
-      await userCreatedConsumer.start();
+      eventConsumer.onUserCreated(userCreatedHandler);
+      await eventConsumer.start();
     },
     async disconnect(): Promise<void> {
+      await eventConsumer.close();
       await prisma.$disconnect();
       redis.disconnect();
     },
