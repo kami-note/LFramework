@@ -1,36 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { z } from "zod";
-
-const emailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const MAX_PASSWORD_LENGTH = 128;
-
-const registerSchema = z.object({
-  email: z
-    .string()
-    .min(1, "email is required")
-    .transform((s) => s.trim().toLowerCase())
-    .refine((s) => s.length > 0, "email is required")
-    .refine((s) => emailFormat.test(s), "Invalid email"),
-  name: z.string().min(1, "name is required").trim(),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(MAX_PASSWORD_LENGTH, "Password must be at most 128 characters"),
-});
-
-const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, "email is required")
-    .transform((s) => s.trim().toLowerCase())
-    .refine((s) => s.length > 0, "email is required")
-    .refine((s) => emailFormat.test(s), "Invalid email"),
-  password: z
-    .string()
-    .min(1, "password is required")
-    .max(MAX_PASSWORD_LENGTH, "Password must be at most 128 characters"),
-});
+import { registerSchema } from "../../application/dtos/register.dto";
+import { loginSchema } from "../../application/dtos/login.dto";
 
 export function validateRegister(req: Request, res: Response, next: NextFunction): void {
   const result = registerSchema.safeParse(req.body);

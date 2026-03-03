@@ -5,6 +5,8 @@ import type { GetCurrentUserUseCase } from "../../application/use-cases/get-curr
 import type { OAuthCallbackUseCase } from "../../application/use-cases/oauth-callback.use-case";
 import type { IOAuthProvider } from "../../application/ports/oauth-provider.port";
 import type { ICacheService } from "@lframework/shared";
+import type { RegisterDto } from "../../application/dtos/register.dto";
+import type { LoginDto } from "../../application/dtos/login.dto";
 import { formatExpiresIn } from "./utils/format-expires-in";
 import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
 import {
@@ -47,8 +49,8 @@ export class AuthController {
 
   register = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email, name, password } = req.body;
-      const result = await this.registerUseCase.execute({ email, name, password });
+      const dto: RegisterDto = req.body;
+      const result = await this.registerUseCase.execute(dto);
       res.status(201).json({
         user: { id: result.id, email: result.email, name: result.name, createdAt: result.createdAt.toISOString() },
         accessToken: result.accessToken,
@@ -73,8 +75,8 @@ export class AuthController {
 
   login = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email, password } = req.body;
-      const result = await this.loginUseCase.execute({ email, password });
+      const dto: LoginDto = req.body;
+      const result = await this.loginUseCase.execute(dto);
       res.json({
         user: { id: result.id, email: result.email, name: result.name },
         accessToken: result.accessToken,

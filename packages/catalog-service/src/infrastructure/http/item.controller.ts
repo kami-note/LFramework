@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { CreateItemUseCase } from "../../application/use-cases/create-item.use-case";
 import { ListItemsUseCase } from "../../application/use-cases/list-items.use-case";
+import { InvalidItemError } from "../../application/errors";
+import type { CreateItemDto } from "../../application/dtos/create-item.dto";
 
 export class ItemController {
   constructor(
@@ -10,16 +12,8 @@ export class ItemController {
 
   create = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, priceAmount, priceCurrency } = req.body;
-      if (!name || priceAmount == null) {
-        res.status(400).json({ error: "name and priceAmount are required" });
-        return;
-      }
-      const result = await this.createItemUseCase.execute({
-        name,
-        priceAmount: Number(priceAmount),
-        priceCurrency,
-      });
+      const dto: CreateItemDto = req.body;
+      const result = await this.createItemUseCase.execute(dto);
       res.status(201).json({
         id: result.id,
         name: result.name,
@@ -28,9 +22,8 @@ export class ItemController {
         createdAt: result.createdAt.toISOString(),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      if (message.includes("negative") || message.includes("Invalid")) {
-        res.status(400).json({ error: message });
+      if (err instanceof InvalidItemError) {
+        res.status(400).json({ error: err.message });
         return;
       }
       res.status(500).json({ error: "Internal server error" });

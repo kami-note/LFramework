@@ -21,7 +21,7 @@
 | Repository / persistence interfaces | `src/domain/repository-interfaces/` |
 | Use cases | `src/application/use-cases/` |
 | Ports (hasher, token, event, cache, OAuth) | `src/application/ports/` |
-| DTOs & validation | `src/application/dtos/`, `src/infrastructure/http/auth.validation.ts` |
+| DTOs & validation | `src/application/dtos/` (schemas Zod + tipos), `src/infrastructure/http/auth.validation.ts`, `user.validation.ts` |
 | Routes & controllers | `src/infrastructure/http/routes.ts`, `auth.routes.ts`, `user.controller.ts`, `auth.controller.ts` |
 | Persistence adapters (Prisma) | `src/infrastructure/persistence/*.repository.ts` |
 | Dependency wiring | `src/container.ts` |

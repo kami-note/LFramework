@@ -4,6 +4,7 @@ import { Money } from "../../domain/value-objects/money.vo";
 import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
 import type { ICacheService } from "@lframework/shared";
 import type { CreateItemDto } from "../dtos/create-item.dto";
+import { InvalidItemError } from "../errors";
 
 export interface CreateItemUseCaseResult {
   id: string;
@@ -21,18 +22,22 @@ export class CreateItemUseCase {
 
   async execute(dto: CreateItemDto): Promise<CreateItemUseCaseResult> {
     const id = randomUUID();
-    const price = Money.create(dto.priceAmount, dto.priceCurrency ?? "BRL");
-    const item = Item.create(id, dto.name, price);
-    await this.itemRepository.save(item);
+    try {
+      const price = Money.create(dto.priceAmount, dto.priceCurrency);
+      const item = Item.create(id, dto.name, price);
+      await this.itemRepository.save(item);
 
-    await this.cache.delete("items:list");
+      await this.cache.delete("items:list");
 
-    return {
-      id: item.id,
-      name: item.name,
-      priceAmount: item.price.amount,
-      priceCurrency: item.price.currency,
-      createdAt: item.createdAt,
-    };
+      return {
+        id: item.id,
+        name: item.name,
+        priceAmount: item.price.amount,
+        priceCurrency: item.price.currency,
+        createdAt: item.createdAt,
+      };
+    } catch (err) {
+      throw new InvalidItemError(err instanceof Error ? err.message : "Invalid item");
+    }
   }
 }

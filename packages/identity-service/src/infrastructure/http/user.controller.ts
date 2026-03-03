@@ -5,6 +5,7 @@ import {
   UserAlreadyExistsError,
   InvalidEmailError,
 } from "../../application/errors";
+import type { CreateUserDto } from "../../application/dtos/create-user.dto";
 
 /**
  * Adapter (entrada): controller HTTP que delega aos casos de uso.
@@ -17,12 +18,8 @@ export class UserController {
 
   create = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email, name } = req.body;
-      if (!email || !name) {
-        res.status(400).json({ error: "email and name are required" });
-        return;
-      }
-      const result = await this.createUserUseCase.execute({ email, name });
+      const dto: CreateUserDto = req.body;
+      const result = await this.createUserUseCase.execute(dto);
       res.status(201).json({
         id: result.id,
         email: result.email,
