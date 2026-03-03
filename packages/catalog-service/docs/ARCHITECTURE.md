@@ -21,7 +21,7 @@
 | Repository / persistence interfaces | `src/domain/repository-interfaces/` |
 | Use cases | `src/application/use-cases/` |
 | Ports (cache, event consumer) | `src/application/ports/` |
-| DTOs & validation | `src/application/dtos/`, `src/infrastructure/http/item.validation.ts` |
+| DTOs & validation | DTOs (schemas Zod como fonte única; tipos inferidos) em `src/application/dtos/`; middlewares de validação em `src/infrastructure/http/*.validation.ts` importam os schemas dos DTOs. Se surgirem mais DTOs com campos em comum (ex.: preço), considerar um `catalog-common.schema.ts`. |
 | Routes & controllers | `src/infrastructure/http/routes.ts`, `item.controller.ts` |
 | Persistence adapters (Prisma) | `src/infrastructure/persistence/*.repository.ts` |
 | Dependency wiring | `src/container.ts` |

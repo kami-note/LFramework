@@ -61,10 +61,6 @@ export class AuthController {
         res.status(409).json({ error: err.message });
         return;
       }
-      if (err instanceof InvalidCredentialsError) {
-        res.status(401).json({ error: err.message });
-        return;
-      }
       if (err instanceof InvalidEmailError || err instanceof PasswordValidationError) {
         res.status(400).json({ error: err.message });
         return;
