@@ -10,6 +10,7 @@ Exemplo genérico de projeto com **DDD**, **Microserviços** e **Arquitetura Hex
 - **Redis** (cache)
 - **RabbitMQ** (eventos entre serviços)
 - **Express** (API HTTP)
+- **Nginx** (API Gateway em Docker, proxy reverso para os microserviços)
 
 ## Estrutura
 
@@ -19,7 +20,9 @@ LFramework/
 │   ├── shared/           # Eventos e tipos compartilhados entre serviços
 │   ├── identity-service  # Microserviço de usuários (Identity)
 │   └── catalog-service   # Microserviço de itens (Catalog)
-├── docker-compose.yml    # Postgres, Redis, RabbitMQ
+├── nginx/
+│   └── nginx.conf        # Configuração do API Gateway (proxy reverso)
+├── docker-compose.yml    # Postgres, Redis, RabbitMQ, Nginx
 └── .env.example
 ```
 
@@ -40,13 +43,13 @@ cp .env.example .env
 pnpm install
 ```
 
-### 2. Subir infraestrutura
+### 2. Subir infraestrutura e API Gateway
 
 ```bash
 pnpm docker:up
 ```
 
-Isso sobe PostgreSQL (5432), Redis (6379) e RabbitMQ (5672 + management 15672).
+Isso sobe PostgreSQL (5432), Redis (6379), RabbitMQ (5672 + management 15672) e **Nginx** como API Gateway (porta 8080 por padrão). O gateway faz proxy para os serviços; use `http://localhost:8080` como base (veja [API Gateway](#api-gateway)).
 
 ### 3. Banco de dados (migrações Prisma)
 
@@ -61,22 +64,38 @@ Ou, a partir da pasta do serviço: `cd packages/identity-service && pnpm prisma 
 
 ### 4. Serviços
 
-Em terminais separados:
+Em terminais separados (ou um só com `pnpm run dev`):
 
 ```bash
 pnpm dev:identity   # http://localhost:3001
 pnpm dev:catalog    # http://localhost:3002
 ```
 
+Com o gateway no ar, você pode chamar tudo por **http://localhost:8080** (veja [API Gateway](#api-gateway)).
+
+## API Gateway
+
+O Nginx em Docker expõe um único ponto de entrada (porta **8080**, configurável via `GATEWAY_PORT`):
+
+| Prefixo      | Serviço  | Exemplos |
+|-------------|-----------|----------|
+| `/identity/` | identity-service | `GET /identity/health`, `POST /identity/api/users`, `GET /identity/api/users/:id` |
+| `/catalog/`  | catalog-service  | `GET /catalog/health`, `GET /catalog/api/items`, `POST /catalog/api/items` |
+| —            | gateway          | `GET /health` (health do próprio gateway) |
+
+→ **Documentação completa:** [docs/API-GATEWAY.md](docs/API-GATEWAY.md) — rotas, exemplos com cURL, configuração e troubleshooting.
+
 ## Endpoints
 
-### Identity Service (porta 3001)
+Os serviços podem ser acessados **diretamente** (portas 3001 e 3002) ou **via API Gateway** (porta 8080, prefixos `/identity/` e `/catalog/`).
+
+### Identity Service (porta 3001 ou gateway `/identity/`)
 
 - `POST /api/users` – criar usuário (`{ "email": "...", "name": "..." }`)
 - `GET /api/users/:id` – buscar usuário por ID
 - `GET /health` – health check
 
-### Catalog Service (porta 3002)
+### Catalog Service (porta 3002 ou gateway `/catalog/`)
 
 - `POST /api/items` – criar item (`{ "name": "...", "priceAmount": 100, "priceCurrency": "BRL" }`)
 - `GET /api/items` – listar itens (com cache Redis)
