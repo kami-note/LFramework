@@ -10,8 +10,3 @@ export interface UserCreatedPayload {
 }
 
 export const USER_CREATED_EVENT = "user.created";
-
-export type UserCreatedEvent = {
-  type: typeof USER_CREATED_EVENT;
-  payload: UserCreatedPayload;
-};
