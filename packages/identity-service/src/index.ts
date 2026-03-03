@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { createContainer } from "./container";
 
 const port = parseInt(process.env.IDENTITY_SERVICE_PORT ?? "3001", 10);
@@ -37,6 +38,15 @@ async function bootstrap() {
   await container.connectRabbitMQ();
 
   const app = express();
+  const corsOrigin = process.env.CORS_ORIGIN;
+  if (corsOrigin) {
+    app.use(
+      cors({
+        origin: corsOrigin.split(",").map((s) => s.trim()),
+        credentials: true,
+      })
+    );
+  }
   app.use(express.json());
   app.use("/api", container.userRoutes);
   app.use("/api", container.authRoutes);

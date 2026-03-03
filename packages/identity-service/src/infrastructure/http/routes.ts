@@ -1,9 +1,12 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { UserController } from "./user.controller";
 
-export function createUserRoutes(controller: UserController): Router {
+export function createUserRoutes(
+  controller: UserController,
+  authMiddleware: (req: Request, res: Response, next: NextFunction) => void
+): Router {
   const router = Router();
-  router.post("/users", controller.create);
-  router.get("/users/:id", controller.getById);
+  router.post("/users", authMiddleware, controller.create);
+  router.get("/users/:id", authMiddleware, controller.getById);
   return router;
 }

@@ -16,13 +16,15 @@ export class JwtTokenService implements ITokenService {
     return jwt.sign(
       payload,
       this.config.secret,
-      { expiresIn: this.config.expiresInSeconds }
+      { expiresIn: this.config.expiresInSeconds, algorithm: "HS256" }
     );
   }
 
   verify(token: string): TokenPayload | null {
     try {
-      const decoded = jwt.verify(token, this.config.secret) as TokenPayload;
+      const decoded = jwt.verify(token, this.config.secret, {
+        algorithms: ["HS256"],
+      }) as TokenPayload;
       return decoded;
     } catch {
       return null;

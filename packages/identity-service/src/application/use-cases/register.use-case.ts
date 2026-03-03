@@ -11,6 +11,7 @@ import { USER_CREATED_EVENT } from "@lframework/shared";
 import type { RegisterDto } from "../dtos/register.dto";
 
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
 
 export interface RegisterResult {
   id: string;
@@ -33,6 +34,9 @@ export class RegisterUseCase {
   async execute(dto: RegisterDto): Promise<RegisterResult> {
     if (!dto.password || dto.password.length < MIN_PASSWORD_LENGTH) {
       throw new Error("Password must be at least 8 characters");
+    }
+    if (dto.password.length > MAX_PASSWORD_LENGTH) {
+      throw new Error("Password must be at most 128 characters");
     }
     const email = Email.create(dto.email);
     const existing = await this.userRepository.findByEmail(email.value);

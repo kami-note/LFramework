@@ -67,7 +67,11 @@ export class AuthController {
         res.status(409).json({ error: "User with this email already exists" });
         return;
       }
-      if (message.includes("Invalid email") || message.includes("at least 8")) {
+      if (
+        message.includes("Invalid email") ||
+        message.includes("at least 8") ||
+        message.includes("at most 128")
+      ) {
         res.status(400).json({ error: message });
         return;
       }
@@ -187,7 +191,9 @@ export class AuthController {
         expiresIn: formatExpiresIn(this.jwtExpiresInSeconds),
       });
     } catch (err) {
-      console.error("OAuth callback (" + providerName + ") failed:", err);
+      const safeMessage = err instanceof Error ? err.message : "Unknown error";
+      const safeName = err instanceof Error ? err.name : "Error";
+      console.error("OAuth callback (" + providerName + ") failed:", safeName, safeMessage);
       res.status(400).json({ error: "OAuth failed" });
     }
   };

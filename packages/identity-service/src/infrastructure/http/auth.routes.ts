@@ -1,9 +1,7 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import { AuthController } from "./auth.controller";
-import { createAuthMiddleware } from "./auth.middleware";
 import { validateRegister, validateLogin } from "./auth.validation";
-import type { ITokenService } from "../../application/ports/token-service.port";
 
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
@@ -23,10 +21,9 @@ const oauthRateLimiter = rateLimit({
 
 export function createAuthRoutes(
   controller: AuthController,
-  tokenService: ITokenService
+  authMiddleware: (req: Request, res: Response, next: NextFunction) => void
 ): Router {
   const router = Router();
-  const authMiddleware = createAuthMiddleware(tokenService);
 
   router.post("/auth/register", authRateLimiter, validateRegister, controller.register);
   router.post("/auth/login", authRateLimiter, validateLogin, controller.login);

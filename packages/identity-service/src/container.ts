@@ -19,6 +19,7 @@ import { GetCurrentUserUseCase } from "./application/use-cases/get-current-user.
 import { OAuthCallbackUseCase } from "./application/use-cases/oauth-callback.use-case";
 import { UserController } from "./infrastructure/http/user.controller";
 import { AuthController } from "./infrastructure/http/auth.controller";
+import { createAuthMiddleware } from "./infrastructure/http/auth.middleware";
 import { createUserRoutes } from "./infrastructure/http/routes";
 import { createAuthRoutes } from "./infrastructure/http/auth.routes";
 
@@ -101,8 +102,9 @@ export function createContainer(config: ContainerConfig) {
     config.jwtExpiresInSeconds
   );
 
-  const userRoutes = createUserRoutes(userController);
-  const authRoutes = createAuthRoutes(authController, tokenService);
+  const authMiddleware = createAuthMiddleware(tokenService);
+  const userRoutes = createUserRoutes(userController, authMiddleware);
+  const authRoutes = createAuthRoutes(authController, authMiddleware);
 
   return {
     prisma,
