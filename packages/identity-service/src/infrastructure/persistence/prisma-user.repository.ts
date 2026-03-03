@@ -1,0 +1,43 @@
+import { PrismaClient } from "../../../generated/prisma-client";
+import { User } from "../../domain/entities/user.entity";
+import { Email } from "../../domain/value-objects/email.vo";
+import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
+
+/**
+ * Adapter: implementação do repositório User com Prisma/PostgreSQL.
+ */
+export class PrismaUserRepository implements IUserRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async save(user: User): Promise<void> {
+    await this.prisma.userModel.upsert({
+      where: { id: user.id },
+      create: {
+        id: user.id,
+        email: user.email.value,
+        name: user.name,
+        createdAt: user.createdAt,
+      },
+      update: {
+        email: user.email.value,
+        name: user.name,
+      },
+    });
+  }
+
+  async findById(id: string): Promise<User | null> {
+    const row = await this.prisma.userModel.findUnique({
+      where: { id },
+    });
+    if (!row) return null;
+    return User.reconstitute(row.id, row.email, row.name, row.createdAt);
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    const row = await this.prisma.userModel.findUnique({
+      where: { email },
+    });
+    if (!row) return null;
+    return User.reconstitute(row.id, row.email, row.name, row.createdAt);
+  }
+}

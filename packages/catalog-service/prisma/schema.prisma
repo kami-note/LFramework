@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("CATALOG_DATABASE_URL")
+}
+
+model ItemModel {
+  id          String   @id @default(uuid())
+  name        String
+  priceAmount Int      @map("price_amount")
+  priceCurrency String @map("price_currency") @default("BRL")
+  createdAt   DateTime @map("created_at")
+
+  @@map("items")
+}

@@ -1,0 +1,18 @@
+{
+  "name": "lframework",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Exemplo DDD + Microserviços + Hexagonal (TypeScript, PostgreSQL, Redis, RabbitMQ)",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "dev:identity": "pnpm --filter identity-service run dev",
+    "dev:catalog": "pnpm --filter catalog-service run dev",
+    "dev": "pnpm run dev:identity & pnpm run dev:catalog",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
