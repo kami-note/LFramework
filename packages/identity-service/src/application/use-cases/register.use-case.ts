@@ -9,6 +9,11 @@ import type { IEventPublisher } from "../ports/event-publisher.port";
 import type { ICacheService } from "@lframework/shared";
 import { USER_CREATED_EVENT } from "@lframework/shared";
 import type { RegisterDto } from "../dtos/register.dto";
+import {
+  UserAlreadyExistsError,
+  InvalidEmailError,
+  PasswordValidationError,
+} from "../errors";
 
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
@@ -33,15 +38,20 @@ export class RegisterUseCase {
 
   async execute(dto: RegisterDto): Promise<RegisterResult> {
     if (!dto.password || dto.password.length < MIN_PASSWORD_LENGTH) {
-      throw new Error("Password must be at least 8 characters");
+      throw new PasswordValidationError("Password must be at least 8 characters");
     }
     if (dto.password.length > MAX_PASSWORD_LENGTH) {
-      throw new Error("Password must be at most 128 characters");
+      throw new PasswordValidationError("Password must be at most 128 characters");
     }
-    const email = Email.create(dto.email);
+    let email: Email;
+    try {
+      email = Email.create(dto.email);
+    } catch {
+      throw new InvalidEmailError("Invalid email");
+    }
     const existing = await this.userRepository.findByEmail(email.value);
     if (existing) {
-      throw new Error("User with this email already exists");
+      throw new UserAlreadyExistsError("User with this email already exists");
     }
 
     const id = randomUUID();

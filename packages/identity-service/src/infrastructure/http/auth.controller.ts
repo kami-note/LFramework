@@ -5,17 +5,14 @@ import type { GetCurrentUserUseCase } from "../../application/use-cases/get-curr
 import type { OAuthCallbackUseCase } from "../../application/use-cases/oauth-callback.use-case";
 import type { IOAuthProvider } from "../../application/ports/oauth-provider.port";
 import type { ICacheService } from "@lframework/shared";
-import { randomBytes } from "crypto";
-
-const OAUTH_STATE_TTL_SECONDS = 600; // 10 min
-const OAUTH_STATE_PREFIX = "oauth_state:";
-
-function formatExpiresIn(seconds: number): string {
-  if (seconds >= 86400) return `${Math.round(seconds / 86400)}d`;
-  if (seconds >= 3600) return `${Math.round(seconds / 3600)}h`;
-  if (seconds >= 60) return `${Math.round(seconds / 60)}m`;
-  return `${seconds}s`;
-}
+import { formatExpiresIn } from "./utils/format-expires-in";
+import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
+import {
+  UserAlreadyExistsError,
+  InvalidCredentialsError,
+  InvalidEmailError,
+  PasswordValidationError,
+} from "../../application/errors";
 
 function getCodeFromQuery(req: Request): string | null {
   const raw = req.query.code;
@@ -58,21 +55,16 @@ export class AuthController {
         expiresIn: formatExpiresIn(this.jwtExpiresInSeconds),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      if (message.includes("already exists")) {
-        res.status(409).json({ error: message });
+      if (err instanceof UserAlreadyExistsError) {
+        res.status(409).json({ error: err.message });
         return;
       }
-      if (isPrismaP2002(err)) {
-        res.status(409).json({ error: "User with this email already exists" });
+      if (err instanceof InvalidCredentialsError) {
+        res.status(401).json({ error: err.message });
         return;
       }
-      if (
-        message.includes("Invalid email") ||
-        message.includes("at least 8") ||
-        message.includes("at most 128")
-      ) {
-        res.status(400).json({ error: message });
+      if (err instanceof InvalidEmailError || err instanceof PasswordValidationError) {
+        res.status(400).json({ error: err.message });
         return;
       }
       res.status(500).json({ error: "Internal server error" });
@@ -89,9 +81,8 @@ export class AuthController {
         expiresIn: formatExpiresIn(this.jwtExpiresInSeconds),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      if (message.includes("Invalid email or password")) {
-        res.status(401).json({ error: message });
+      if (err instanceof InvalidCredentialsError) {
+        res.status(401).json({ error: err.message });
         return;
       }
       res.status(500).json({ error: "Internal server error" });
@@ -121,11 +112,7 @@ export class AuthController {
       res.status(503).json({ error: "Google OAuth is not configured" });
       return;
     }
-    const state = randomBytes(16).toString("hex");
-    await this.cache.set(OAUTH_STATE_PREFIX + state, "1", OAUTH_STATE_TTL_SECONDS);
-    const redirectUri = this.baseUrl + "/api/auth/google/callback";
-    const url = this.googleProvider.getAuthorizationUrl(redirectUri, state);
-    res.redirect(url);
+    await performOAuthRedirect(this.googleProvider, "google", res, this.cache, this.baseUrl);
   };
 
   googleCallback = async (req: Request, res: Response): Promise<void> => {
@@ -137,11 +124,7 @@ export class AuthController {
       res.status(503).json({ error: "GitHub OAuth is not configured" });
       return;
     }
-    const state = randomBytes(16).toString("hex");
-    await this.cache.set(OAUTH_STATE_PREFIX + state, "1", OAUTH_STATE_TTL_SECONDS);
-    const redirectUri = this.baseUrl + "/api/auth/github/callback";
-    const url = this.githubProvider.getAuthorizationUrl(redirectUri, state);
-    res.redirect(url);
+    await performOAuthRedirect(this.githubProvider, "github", res, this.cache, this.baseUrl);
   };
 
   githubCallback = async (req: Request, res: Response): Promise<void> => {
@@ -197,8 +180,4 @@ export class AuthController {
       res.status(400).json({ error: "OAuth failed" });
     }
   };
-}
-
-function isPrismaP2002(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
 }

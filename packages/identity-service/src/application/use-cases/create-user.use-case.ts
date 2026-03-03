@@ -6,6 +6,7 @@ import type { ICacheService } from "@lframework/shared";
 import type { IEventPublisher } from "../ports/event-publisher.port";
 import type { CreateUserDto } from "../dtos/create-user.dto";
 import { USER_CREATED_EVENT } from "@lframework/shared";
+import { UserAlreadyExistsError, InvalidEmailError } from "../errors";
 
 export interface CreateUserUseCaseResult {
   id: string;
@@ -22,10 +23,15 @@ export class CreateUserUseCase {
   ) {}
 
   async execute(dto: CreateUserDto): Promise<CreateUserUseCaseResult> {
-    const email = Email.create(dto.email);
+    let email: Email;
+    try {
+      email = Email.create(dto.email);
+    } catch {
+      throw new InvalidEmailError("Invalid email");
+    }
     const existing = await this.userRepository.findByEmail(email.value);
     if (existing) {
-      throw new Error("User with this email already exists");
+      throw new UserAlreadyExistsError("User with this email already exists");
     }
 
     const id = randomUUID();

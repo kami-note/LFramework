@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { CreateUserUseCase } from "../../application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "../../application/use-cases/get-user-by-id.use-case";
+import {
+  UserAlreadyExistsError,
+  InvalidEmailError,
+} from "../../application/errors";
 
 /**
  * Adapter (entrada): controller HTTP que delega aos casos de uso.
@@ -26,13 +30,12 @@ export class UserController {
         createdAt: result.createdAt.toISOString(),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      if (message.includes("already exists")) {
-        res.status(409).json({ error: message });
+      if (err instanceof UserAlreadyExistsError) {
+        res.status(409).json({ error: err.message });
         return;
       }
-      if (message.includes("Invalid email")) {
-        res.status(400).json({ error: message });
+      if (err instanceof InvalidEmailError) {
+        res.status(400).json({ error: err.message });
         return;
       }
       res.status(500).json({ error: "Internal server error" });

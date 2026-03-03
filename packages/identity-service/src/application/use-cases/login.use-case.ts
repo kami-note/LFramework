@@ -3,6 +3,7 @@ import type { IAuthCredentialRepository } from "../../domain/repository-interfac
 import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { LoginDto } from "../dtos/login.dto";
+import { InvalidCredentialsError } from "../errors";
 
 export interface LoginResult {
   id: string;
@@ -22,17 +23,17 @@ export class LoginUseCase {
   async execute(dto: LoginDto): Promise<LoginResult> {
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user) {
-      throw new Error("Invalid email or password");
+      throw new InvalidCredentialsError("Invalid email or password");
     }
 
     const hash = await this.authCredentialRepository.getPasswordHashByUserId(user.id);
     if (!hash) {
-      throw new Error("Invalid email or password");
+      throw new InvalidCredentialsError("Invalid email or password");
     }
 
     const valid = await this.passwordHasher.verify(dto.password, hash);
     if (!valid) {
-      throw new Error("Invalid email or password");
+      throw new InvalidCredentialsError("Invalid email or password");
     }
 
     const accessToken = this.tokenService.sign({

@@ -1,7 +1,11 @@
 import { PrismaClient } from "../../../generated/prisma-client";
 import { User } from "../../domain/entities/user.entity";
-import { Email } from "../../domain/value-objects/email.vo";
 import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
+import { UserAlreadyExistsError } from "../../application/errors";
+
+function isPrismaP2002(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
+}
 
 /**
  * Adapter: implementação do repositório User com Prisma/PostgreSQL.
@@ -10,7 +14,8 @@ export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(user: User): Promise<void> {
-    await this.prisma.userModel.upsert({
+    try {
+      await this.prisma.userModel.upsert({
       where: { id: user.id },
       create: {
         id: user.id,
@@ -23,6 +28,12 @@ export class PrismaUserRepository implements IUserRepository {
         name: user.name,
       },
     });
+    } catch (err) {
+      if (isPrismaP2002(err)) {
+        throw new UserAlreadyExistsError("User with this email already exists");
+      }
+      throw err;
+    }
   }
 
   async findById(id: string): Promise<User | null> {

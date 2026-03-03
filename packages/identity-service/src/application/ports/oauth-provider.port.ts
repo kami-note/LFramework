@@ -1,9 +1,9 @@
+import type { OAuthProvider } from "../../domain/types";
+
 /**
  * Porta: provedor OAuth (Google, GitHub, etc.).
  * Troca o authorization code por dados do usuário no provedor.
  */
-export type OAuthProviderType = "google" | "github";
-
 export interface OAuthUserInfo {
   providerId: string;
   email: string;
@@ -11,7 +11,7 @@ export interface OAuthUserInfo {
 }
 
 export interface IOAuthProvider {
-  readonly provider: OAuthProviderType;
+  readonly provider: OAuthProvider;
   getUserInfoFromCode(code: string, redirectUri: string): Promise<OAuthUserInfo | null>;
   getAuthorizationUrl(redirectUri: string, state: string): string;
 }
