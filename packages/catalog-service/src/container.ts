@@ -1,5 +1,6 @@
 import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
+import type { UserCreatedPayload } from "@lframework/shared";
 import { RedisCacheAdapter } from "@lframework/shared";
 import { PrismaItemRepository } from "./infrastructure/persistence/prisma-item.repository";
 import { RabbitMqUserEventsAdapter } from "./infrastructure/messaging/rabbitmq-user-events.adapter";
@@ -33,13 +34,7 @@ export function createContainer(config: {
     prisma,
     redis,
     itemRoutes,
-    async connectRabbitMQ(
-      userCreatedHandler: (payload: {
-        userId: string;
-        email: string;
-        name: string;
-      }) => Promise<void>
-    ): Promise<void> {
+    async connectRabbitMQ(userCreatedHandler: (payload: UserCreatedPayload) => Promise<void>): Promise<void> {
       eventConsumer.onUserCreated(userCreatedHandler);
       await eventConsumer.start();
     },

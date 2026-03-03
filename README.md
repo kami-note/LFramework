@@ -23,11 +23,13 @@ LFramework/
 └── .env.example
 ```
 
-Cada microserviço segue **hexagonal + DDD**:
+Cada microserviço segue **hexagonal + DDD** com estrutura e convenções fixas (onde colocar cada arquivo e como nomear):
 
-- **domain/** – entidades, value objects, interfaces de repositório, eventos de domínio
+- **domain/** – entidades, value objects, interfaces de repositório
 - **application/** – casos de uso, portas (interfaces), DTOs
 - **infrastructure/** – adapters: HTTP, persistência (Prisma), cache (Redis), mensageria (RabbitMQ)
+
+→ **Guia completo:** [docs/STRUCTURE.md](docs/STRUCTURE.md) — mapa da árvore, convenções de nomeação, checklist para novo recurso e novo serviço (estilo Laravel: estrutura que ajuda e não atrapalha).
 
 ## Como rodar
 
@@ -89,12 +91,13 @@ Contratos de eventos e constantes RabbitMQ (exchanges, filas) ficam em `packages
 
 ## Reutilizar em novos projetos
 
-1. **Estrutura de pastas** – Copie a pasta de um serviço (ex.: `identity-service`) e renomeie; substitua entidades/agregados (ex.: `User` → seu agregado).
-2. **Domain** – Novos agregados em `domain/entities` e `domain/aggregates`; value objects em `domain/value-objects`; interfaces de repositório em `domain/repository-interfaces`.
-3. **Application** – Novos casos de uso em `application/use-cases`; novas portas em `application/ports`.
-4. **Infrastructure** – Novos adapters em `infrastructure/` (persistence, cache, messaging, http).
-5. **Portas** – As interfaces (ex.: `IUserRepository`, `ICacheService`, `IEventPublisher`) permitem trocar implementações (outro banco, outro cache) sem alterar domain/application.
-6. **Shared** – Centralize eventos de domínio compartilhados e constantes RabbitMQ em `packages/shared`.
+Siga o guia **[docs/STRUCTURE.md](docs/STRUCTURE.md)** para:
+
+- **Novo recurso (entidade)** — checklist passo a passo: entity, repository interface, DTOs, use cases, controller, routes, container.
+- **Novo microserviço** — copiar a árvore de um serviço, mesma estrutura e convenções de nomeação.
+- **O que vai no shared** — apenas eventos compartilhados, constantes RabbitMQ e contratos usados por mais de um serviço.
+
+Resumo: estrutura fixa por serviço; convenções de nomeação (ex.: `create-<entidade>.use-case.ts`, `prisma-<entidade>.repository.ts`); um único lugar para “onde coloco X”.
 
 ## Padrões de projeto
 

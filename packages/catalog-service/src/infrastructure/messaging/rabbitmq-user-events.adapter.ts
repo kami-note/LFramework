@@ -1,4 +1,5 @@
 import amqp from "amqplib";
+import type { UserCreatedPayload } from "@lframework/shared";
 import type { IEventConsumer } from "../../application/ports/event-consumer.port";
 import { RabbitMqUserCreatedConsumer } from "./rabbitmq-user-created.consumer";
 
@@ -7,12 +8,12 @@ import { RabbitMqUserCreatedConsumer } from "./rabbitmq-user-created.consumer";
  * Encapsula conexão e ciclo de vida (start/close) para uso no container.
  */
 export class RabbitMqUserEventsAdapter implements IEventConsumer {
-  private handler: ((payload: { userId: string; email: string; name: string }) => Promise<void>) | null = null;
+  private handler: ((payload: UserCreatedPayload) => Promise<void>) | null = null;
   private consumer: RabbitMqUserCreatedConsumer | null = null;
 
   constructor(private readonly rabbitmqUrl: string) {}
 
-  onUserCreated(handler: (payload: { userId: string; email: string; name: string }) => Promise<void>): void {
+  onUserCreated(handler: (payload: UserCreatedPayload) => Promise<void>): void {
     this.handler = handler;
   }
 

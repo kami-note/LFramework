@@ -1,15 +1,10 @@
 import amqp, { ConsumeMessage } from "amqplib";
+import type { UserCreatedPayload } from "@lframework/shared";
 import {
   USER_CREATED_EVENT,
   EXCHANGE_USER_EVENTS,
   QUEUE_USER_CREATED_CATALOG,
 } from "@lframework/shared";
-
-export type UserCreatedHandler = (payload: {
-  userId: string;
-  email: string;
-  name: string;
-}) => Promise<void>;
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
 
@@ -17,12 +12,12 @@ type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
  * Adapter: consome evento UserCreated do RabbitMQ e chama o handler registrado.
  */
 export class RabbitMqUserCreatedConsumer {
-  private handler: UserCreatedHandler | null = null;
+  private handler: ((payload: UserCreatedPayload) => Promise<void>) | null = null;
   private channel: amqp.Channel | null = null;
 
   constructor(private readonly connection: AmqpConnection) {}
 
-  onUserCreated(fn: UserCreatedHandler): void {
+  onUserCreated(fn: (payload: UserCreatedPayload) => Promise<void>): void {
     this.handler = fn;
   }
 
@@ -41,8 +36,8 @@ export class RabbitMqUserCreatedConsumer {
       try {
         const body = JSON.parse(msg.content.toString());
         if (body.type === USER_CREATED_EVENT && body.payload) {
-          const { userId, email, name } = body.payload;
-          await this.handler({ userId, email, name });
+          const payload = body.payload as UserCreatedPayload;
+          await this.handler(payload);
         }
         this.channel.ack(msg);
       } catch (err) {

@@ -2,7 +2,7 @@ import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
 import { RedisCacheAdapter } from "@lframework/shared";
 import { PrismaUserRepository } from "./infrastructure/persistence/prisma-user.repository";
-import { RabbitMqMessagingFacade } from "./infrastructure/messaging/rabbitmq-messaging.facade";
+import { RabbitMqEventPublisherAdapter } from "./infrastructure/messaging/rabbitmq-event-publisher.adapter";
 import { CreateUserUseCase } from "./application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "./application/use-cases/get-user-by-id.use-case";
 import { UserController } from "./infrastructure/http/user.controller";
@@ -19,12 +19,12 @@ export function createContainer(config: {
 }) {
   const prisma = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
   const redis = new Redis(config.redisUrl);
-  const messagingFacade = new RabbitMqMessagingFacade(config.rabbitmqUrl);
+  const eventPublisher = new RabbitMqEventPublisherAdapter(config.rabbitmqUrl);
 
   const userRepository = new PrismaUserRepository(prisma);
   const cache = new RedisCacheAdapter(redis);
 
-  const createUserUseCase = new CreateUserUseCase(userRepository, cache, messagingFacade);
+  const createUserUseCase = new CreateUserUseCase(userRepository, cache, eventPublisher);
   const getUserByIdUseCase = new GetUserByIdUseCase(userRepository, cache);
 
   const userController = new UserController(createUserUseCase, getUserByIdUseCase);
@@ -35,10 +35,10 @@ export function createContainer(config: {
     redis,
     userRoutes,
     async connectRabbitMQ(): Promise<void> {
-      await messagingFacade.connect();
+      await eventPublisher.connect();
     },
     async disconnect(): Promise<void> {
-      await messagingFacade.disconnect();
+      await eventPublisher.disconnect();
       await prisma.$disconnect();
       redis.disconnect();
     },
