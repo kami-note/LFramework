@@ -5,12 +5,33 @@ const port = parseInt(process.env.IDENTITY_SERVICE_PORT ?? "3001", 10);
 const databaseUrl = process.env.IDENTITY_DATABASE_URL ?? "postgresql://lframework:lframework@localhost:5432/lframework_identity";
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
 const rabbitmqUrl = process.env.RABBITMQ_URL ?? "amqp://lframework:lframework@localhost:5672";
+const isProduction = process.env.NODE_ENV === "production";
+const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "change-me-in-production-use-long-secret");
+const jwtExpiresInSeconds = parseInt(process.env.JWT_EXPIRES_IN_SECONDS ?? "604800", 10); // 7 days
+const baseUrl = process.env.BASE_URL ?? `http://localhost:${port}`;
+
+if (isProduction && (!jwtSecret || jwtSecret.length < 32)) {
+  console.error("JWT_SECRET must be set and at least 32 characters in production");
+  process.exit(1);
+}
+
+const googleOAuth = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  ? { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET }
+  : undefined;
+const githubOAuth = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+  ? { clientId: process.env.GITHUB_CLIENT_ID, clientSecret: process.env.GITHUB_CLIENT_SECRET }
+  : undefined;
 
 async function bootstrap() {
   const container = createContainer({
     databaseUrl,
     redisUrl,
     rabbitmqUrl,
+    jwtSecret,
+    jwtExpiresInSeconds,
+    baseUrl,
+    googleOAuth,
+    githubOAuth,
   });
 
   await container.connectRabbitMQ();
@@ -18,6 +39,7 @@ async function bootstrap() {
   const app = express();
   app.use(express.json());
   app.use("/api", container.userRoutes);
+  app.use("/api", container.authRoutes);
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok", service: "identity-service" });

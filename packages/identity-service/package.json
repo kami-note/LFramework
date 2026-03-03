@@ -14,12 +14,17 @@
     "@lframework/shared": "workspace:*",
     "@prisma/client": "^5.22.0",
     "amqplib": "^0.10.3",
+    "argon2": "^0.41.1",
     "express": "^4.21.0",
-    "ioredis": "^5.4.1"
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "express-rate-limit": "^7.4.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.4",
     "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
     "prisma": "^5.22.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.0"

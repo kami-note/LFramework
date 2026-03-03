@@ -93,6 +93,7 @@ Os serviços podem ser acessados **diretamente** (portas 3001 e 3002) ou **via A
 
 - `POST /api/users` – criar usuário (`{ "email": "...", "name": "..." }`)
 - `GET /api/users/:id` – buscar usuário por ID
+- **Autenticação:** `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` (Bearer JWT), OAuth: `GET /api/auth/google`, `GET /api/auth/github` (+ callbacks) — ver [Autenticação e OAuth](docs/AUTH.md)
 - `GET /health` – health check
 
 ### Catalog Service (porta 3002 ou gateway `/catalog/`)

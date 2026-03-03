@@ -9,10 +9,33 @@ datasource db {
 }
 
 model UserModel {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String
-  createdAt DateTime @map("created_at")
+  id             String               @id @default(uuid())
+  email          String               @unique
+  name           String
+  createdAt      DateTime             @map("created_at")
+  authCredential AuthCredentialModel?
+  oauthAccounts  OAuthAccountModel[]
 
   @@map("users")
+}
+
+model AuthCredentialModel {
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  passwordHash String   @map("password_hash")
+  user         UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_credentials")
+}
+
+model OAuthAccountModel {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  provider   String   // "google" | "github"
+  providerId String   @map("provider_id")
+  createdAt  DateTime @map("created_at")
+  user       UserModel @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@map("oauth_accounts")
 }

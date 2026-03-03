@@ -28,11 +28,18 @@ Todas as URLs são relativas à base do gateway: `http://localhost:8080` (ou o v
 
 ### Identity Service (prefixo `/identity/`)
 
-| Método | Path do gateway           | Proxy para (identity-service) |
-|--------|---------------------------|--------------------------------|
-| `POST` | `/identity/api/users`     | `POST /api/users`              |
-| `GET`  | `/identity/api/users/:id` | `GET /api/users/:id`           |
-| `GET`  | `/identity/health`        | `GET /health`                  |
+| Método | Path do gateway                  | Proxy para (identity-service)    |
+|--------|----------------------------------|-----------------------------------|
+| `POST` | `/identity/api/users`            | `POST /api/users`                 |
+| `GET`  | `/identity/api/users/:id`        | `GET /api/users/:id`              |
+| `POST` | `/identity/api/auth/register`     | `POST /api/auth/register`        |
+| `POST` | `/identity/api/auth/login`       | `POST /api/auth/login`           |
+| `GET`  | `/identity/api/auth/me`          | `GET /api/auth/me` (Bearer JWT)   |
+| `GET`  | `/identity/api/auth/google`      | `GET /api/auth/google` (redirect) |
+| `GET`  | `/identity/api/auth/google/callback` | `GET /api/auth/google/callback` |
+| `GET`  | `/identity/api/auth/github`      | `GET /api/auth/github` (redirect) |
+| `GET`  | `/identity/api/auth/github/callback`  | `GET /api/auth/github/callback` |
+| `GET`  | `/identity/health`               | `GET /health`                    |
 
 ### Catalog Service (prefixo `/catalog/`)
 
