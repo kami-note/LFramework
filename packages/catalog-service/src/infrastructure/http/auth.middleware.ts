@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { sendError } from "./utils/send-error";
+import { sendError } from "@lframework/shared";
 
 declare global {
   namespace Express {

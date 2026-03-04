@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import type { ITokenService } from "../../application/ports/token-service.port";
-import { sendError } from "./utils/send-error";
+import { sendError } from "@lframework/shared";
 
 declare global {
   namespace Express {

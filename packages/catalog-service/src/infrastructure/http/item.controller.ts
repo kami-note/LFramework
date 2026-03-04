@@ -4,7 +4,7 @@ import { ListItemsUseCase } from "../../application/use-cases/list-items.use-cas
 import { InvalidItemError } from "../../application/errors";
 import type { CreateItemDto } from "../../application/dtos/create-item.dto";
 import type { AuthenticatedRequest } from "./auth.middleware";
-import { sendError } from "./utils/send-error";
+import { sendError } from "@lframework/shared";
 
 export class ItemController {
   constructor(

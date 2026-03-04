@@ -1,134 +1,78 @@
 # LFramework
 
-Exemplo genérico de projeto com **DDD**, **Microserviços** e **Arquitetura Hexagonal**, em TypeScript, usando PostgreSQL, Redis e RabbitMQ. Use este repositório como base ou referência em outros projetos.
+Framework de referência em TypeScript para projetos com **DDD**, **Arquitetura Hexagonal** e **Microserviços**. Pensado para escalar: monorepo, convenções fixas e núcleo compartilhado (`@lframework/shared`) com formato de erro, validação e schemas comuns.
 
 ## Stack
 
 - **TypeScript** (strict)
 - **Monorepo** (pnpm workspaces)
-- **PostgreSQL** (persistência, Prisma)
+- **PostgreSQL** (Prisma)
 - **Redis** (cache)
 - **RabbitMQ** (eventos entre serviços)
 - **Express** (API HTTP)
-- **Nginx** (API Gateway em Docker, proxy reverso para os microserviços)
+- **Nginx** (API Gateway em Docker)
 
-## Estrutura
+## Estrutura do repositório
 
 ```
 LFramework/
 ├── packages/
-│   ├── shared/           # Eventos e tipos compartilhados entre serviços
-│   ├── identity-service  # Microserviço de usuários (Identity)
-│   └── catalog-service   # Microserviço de itens (Catalog)
+│   ├── shared/             # Núcleo do framework: eventos, DTOs, HTTP helpers, schemas
+│   ├── identity-service/   # Microserviço de identidade (auth, usuários)
+│   └── catalog-service/    # Microserviço de catálogo (itens)
 ├── nginx/
-│   └── nginx.conf        # Configuração do API Gateway (proxy reverso)
-├── docker-compose.yml    # Postgres, Redis, RabbitMQ, Nginx
-└── .env.example
+│   └── nginx.conf          # API Gateway (proxy reverso)
+├── docker-compose.yml      # Postgres, Redis, RabbitMQ, Nginx
+└── docs/                   # Documentação
 ```
 
-Cada microserviço segue **hexagonal + DDD** com estrutura e convenções fixas (onde colocar cada arquivo e como nomear):
+Cada serviço segue **hexagonal + DDD**: `domain/`, `application/`, `infrastructure/`. O guia [docs/STRUCTURE.md](docs/STRUCTURE.md) define onde colocar cada arquivo e como nomear (estilo Laravel).
 
-- **domain/** – entidades, value objects, interfaces de repositório
-- **application/** – casos de uso, portas (interfaces), DTOs
-- **infrastructure/** – adapters: HTTP, persistência (Prisma), cache (Redis), mensageria (RabbitMQ)
+## Documentação
 
-→ **Guia completo:** [docs/STRUCTURE.md](docs/STRUCTURE.md) — mapa da árvore, convenções de nomeação, checklist para novo recurso e novo serviço (estilo Laravel: estrutura que ajuda e não atrapalha).
-
-→ **Troubleshooting:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — formato de erro da API, códigos HTTP e dicas para debugar 401, 409, 500.
+| Documento | Conteúdo |
+|-----------|----------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Visão do framework, shared como núcleo, camadas, convenções |
+| [docs/STRUCTURE.md](docs/STRUCTURE.md) | Árvore de pastas, nomeação, checklist novo recurso / novo serviço |
+| [docs/API.md](docs/API.md) | Gateway, endpoints, autenticação, exemplos |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Como rodar, testes, env, troubleshooting |
+| [docs/SECURITY.md](docs/SECURITY.md) | Validação, limites, OWASP, boas práticas |
 
 ## Como rodar
-
-### 1. Dependências e variáveis
 
 ```bash
 cp .env.example .env
 pnpm install
-```
-
-### 2. Subir infraestrutura e API Gateway
-
-```bash
 pnpm docker:up
 ```
 
-Isso sobe PostgreSQL (5432), Redis (6379), RabbitMQ (5672 + management 15672) e **Nginx** como API Gateway (porta 8080 por padrão). O gateway faz proxy para os serviços; use `http://localhost:8080` como base (veja [API Gateway](#api-gateway)).
-
-### 3. Banco de dados (migrações Prisma)
-
-Cada serviço tem seu próprio schema Prisma e gera o client em `packages/<serviço>/generated/prisma-client`; no exemplo usam o mesmo banco (você pode separar em produção).
+Migrações (uma vez):
 
 ```bash
 pnpm --filter identity-service exec prisma migrate dev --name init --schema=./prisma/schema.prisma
 pnpm --filter catalog-service exec prisma migrate dev --name init --schema=./prisma/schema.prisma
 ```
 
-Ou, a partir da pasta do serviço: `cd packages/identity-service && pnpm prisma migrate dev --name init`.
+Para migrações futuras, ver [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-### 4. Serviços
-
-Em terminais separados (ou um só com `pnpm run dev`):
+Serviços (em terminais separados ou ambos de uma vez):
 
 ```bash
 pnpm dev:identity   # http://localhost:3001
 pnpm dev:catalog    # http://localhost:3002
+# ou: pnpm dev       # sobe os dois
 ```
 
-Com o gateway no ar, você pode chamar tudo por **http://localhost:8080** (veja [API Gateway](#api-gateway)).
+Com o gateway: **http://localhost:8080** (prefixos `/identity/` e `/catalog/`). Detalhes em [docs/API.md](docs/API.md) e [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-### 5. Testes
+## Testes
 
 ```bash
 pnpm test
 ```
 
-Roda os testes (Vitest) em todos os pacotes. Nos serviços há testes unitários de use cases e de validação Zod (ex.: `create-item.dto.spec.ts`). Testes de integração HTTP (ex.: GET /api/items retorna 200) estão previstos como próximo passo.
+Roda Vitest em todos os pacotes (use cases, DTOs, controllers).
 
-## API Gateway
+## Padrões
 
-O Nginx em Docker expõe um único ponto de entrada (porta **8080**, configurável via `GATEWAY_PORT`):
-
-| Prefixo      | Serviço  | Exemplos |
-|-------------|-----------|----------|
-| `/identity/` | identity-service | `GET /identity/health`, `POST /identity/api/users`, `GET /identity/api/users/:id` |
-| `/catalog/`  | catalog-service  | `GET /catalog/health`, `GET /catalog/api/items`, `POST /catalog/api/items` |
-| —            | gateway          | `GET /health` (health do próprio gateway) |
-
-→ **Documentação completa:** [docs/API-GATEWAY.md](docs/API-GATEWAY.md) — rotas, exemplos com cURL, configuração e troubleshooting.
-
-## Endpoints
-
-Os serviços podem ser acessados **diretamente** (portas 3001 e 3002) ou **via API Gateway** (porta 8080, prefixos `/identity/` e `/catalog/`).
-
-### Identity Service (porta 3001 ou gateway `/identity/`)
-
-- `POST /api/users` – criar usuário (`{ "email": "...", "name": "..." }`)
-- `GET /api/users/:id` – buscar usuário por ID
-- **Autenticação:** `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` (Bearer JWT), OAuth: `GET /api/auth/google`, `GET /api/auth/github` (+ callbacks) — ver [Autenticação e OAuth](docs/AUTH.md)
-- `GET /health` – health check
-
-### Catalog Service (porta 3002 ou gateway `/catalog/`)
-
-- `POST /api/items` – criar item (`{ "name": "...", "priceAmount": 100, "priceCurrency": "BRL" }`)
-- `GET /api/items` – listar itens (com cache Redis)
-- `GET /health` – health check
-
-## Eventos entre serviços
-
-- O **Identity** publica o evento `user.created` no RabbitMQ quando um usuário é criado.
-- O **Catalog** consome esse evento (fila `catalog.user_created`) e reage (ex.: log; em outros projetos: criar dados locais, invalidar cache, etc.).
-
-Contratos de eventos e constantes RabbitMQ (exchanges, filas) ficam em `packages/shared`.
-
-## Reutilizar em novos projetos
-
-Siga o guia **[docs/STRUCTURE.md](docs/STRUCTURE.md)** para:
-
-- **Novo recurso (entidade)** — checklist passo a passo: entity, repository interface, DTOs, use cases, controller, routes, container.
-- **Novo microserviço** — copiar a árvore de um serviço, mesma estrutura e convenções de nomeação.
-- **O que vai no shared** — apenas eventos compartilhados, constantes RabbitMQ e contratos usados por mais de um serviço.
-
-Resumo: estrutura fixa por serviço; convenções de nomeação (ex.: `create-<entidade>.use-case.ts`, `prisma-<entidade>.repository.ts`); um único lugar para “onde coloco X”.
-
-## Padrões de projeto
-
-O desenho aplica: Ports & Adapters (Hexagonal), Repository, Dependency Inversion, Adapter, Entity/Value Object/Aggregate (DDD), Domain Event, Application Service (Use Case), DTO, Publish-Subscribe (RabbitMQ).
+Ports & Adapters (Hexagonal), Repository, Inversão de dependência, DDD (entidade, value object, domain event), Use case, DTO, Publish-Subscribe (RabbitMQ). O shared expõe contrato de erro (`ErrorResponseDto`), helpers HTTP (`sendError`, `sendValidationError`) e schemas comuns (ex.: `nameSchema`) para manter consistência entre serviços à medida que o projeto escala.

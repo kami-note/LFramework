@@ -1,18 +1,16 @@
 import { z } from "zod";
+import { nameSchema as sharedNameSchema, MAX_NAME_LENGTH as sharedMaxNameLength } from "@lframework/shared";
 
 const emailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 128;
 
-/** Rejeita caracteres que não são nome (evita XSS, emoji, símbolos). Letras, números, espaços, hífen, apóstrofo. */
-const nameAllowedPattern = /^[\p{L}\p{N}\s\-'.]+$/u;
-
-/** Tamanho máximo razoável para nome (evita DoS e campos gigantes no DB). */
-export const MAX_NAME_LENGTH = 200;
-
 /** Email: RFC 5321 — endereço completo até 254 caracteres. */
 const MAX_EMAIL_LENGTH = 254;
+
+/** Tamanho máximo para nome. Re-exportado do shared. */
+export const MAX_NAME_LENGTH = sharedMaxNameLength;
 
 /**
  * Schema de email reutilizado em register e login.
@@ -27,12 +25,5 @@ export const emailSchema = z
   .refine((s) => !s.includes("<") && !s.includes(">"), "Invalid email")
   .refine((s) => emailFormat.test(s), "Invalid email");
 
-/**
- * Nome de pessoa: trim primeiro, min(1), max(200). Sem emoji, sem tags.
- */
-export const nameSchema = z
-  .string()
-  .transform((s) => s.trim())
-  .refine((s) => s.length >= 1, "name is required")
-  .refine((s) => s.length <= MAX_NAME_LENGTH, "name is too long")
-  .refine((s) => nameAllowedPattern.test(s), "name contains invalid characters (only letters, numbers, spaces, hyphen, apostrophe)");
+/** Nome de pessoa: mesmo schema do shared (trim, min 1, max 200, sem emoji/tags). */
+export const nameSchema = sharedNameSchema;

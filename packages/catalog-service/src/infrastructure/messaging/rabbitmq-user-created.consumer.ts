@@ -5,14 +5,13 @@ import {
   USER_CREATED_EVENT,
   EXCHANGE_USER_EVENTS,
   QUEUE_USER_CREATED_CATALOG,
+  nameSchema,
 } from "@lframework/shared";
 
 /** Não confiamos no publisher: validamos payload com as mesmas regras de nome/email e occurredAt. */
 
 const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LENGTH = 254;
-const NAME_PATTERN = /^[\p{L}\p{N}\s\-'.]+$/u;
-const MAX_NAME_LENGTH = 200;
 
 const userCreatedPayloadSchema = z.object({
   userId: z.string().min(1, "userId required").max(64),
@@ -23,12 +22,7 @@ const userCreatedPayloadSchema = z.object({
     .refine((s) => s.length <= MAX_EMAIL_LENGTH, "email too long")
     .refine((s) => !s.includes("<") && !s.includes(">"), "Invalid email")
     .refine((s) => EMAIL_FORMAT.test(s), "Invalid email"),
-  name: z
-    .string()
-    .transform((s) => s.trim())
-    .refine((s) => s.length >= 1, "name required")
-    .refine((s) => s.length <= MAX_NAME_LENGTH, "name too long")
-    .refine((s) => NAME_PATTERN.test(s), "name contains invalid characters"),
+  name: nameSchema,
   occurredAt: z
     .string()
     .min(1, "occurredAt required")

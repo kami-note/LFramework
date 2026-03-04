@@ -8,7 +8,7 @@ import {
 } from "../../application/errors";
 import type { CreateUserDto } from "../../application/dtos/create-user.dto";
 import type { AuthenticatedRequest } from "./auth.middleware";
-import { sendError } from "./utils/send-error";
+import { sendError } from "@lframework/shared";
 
 const uuidParamSchema = z.string().uuid();
 

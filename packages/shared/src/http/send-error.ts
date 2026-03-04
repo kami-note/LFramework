@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { ErrorResponseDto } from "@lframework/shared";
+import type { ErrorResponseDto } from "../dtos/error-response.dto";
 
 /**
  * Centraliza o envio de erro HTTP no formato { error: string } (ErrorResponseDto).

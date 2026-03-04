@@ -16,7 +16,7 @@ import {
 } from "../../application/dtos/oauth-callback-query.dto";
 import { formatExpiresIn } from "./utils/format-expires-in";
 import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
-import { sendError } from "./utils/send-error";
+import { sendError } from "@lframework/shared";
 import {
   UserAlreadyExistsError,
   InvalidCredentialsError,
