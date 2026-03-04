@@ -1,13 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { createValidateBody } from "@lframework/shared";
 import { createItemSchema } from "../../application/dtos/create-item.dto";
-import { sendValidationError } from "@lframework/shared";
 
-export function validateCreateItem(req: Request, res: Response, next: NextFunction): void {
-  const result = createItemSchema.safeParse(req.body);
-  if (!result.success) {
-    sendValidationError(res, result.error);
-    return;
-  }
-  req.body = result.data;
-  next();
-}
+export const validateCreateItem = createValidateBody(createItemSchema);

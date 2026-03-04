@@ -5,7 +5,7 @@ import { GetUserByIdUseCase } from "../../application/use-cases/get-user-by-id.u
 import { mapApplicationErrorToHttp } from "../../application/http/error-to-http.mapper";
 import type { CreateUserDto } from "../../application/dtos/create-user.dto";
 import type { AuthenticatedRequest } from "@lframework/shared";
-import { sendError } from "@lframework/shared";
+import { sendError, logger, type RequestWithRequestId } from "@lframework/shared";
 
 const uuidParamSchema = z.string().uuid();
 
@@ -49,7 +49,9 @@ export class UserController {
         return;
       }
       res.json(user);
-    } catch {
+    } catch (err) {
+      const requestId = (req as RequestWithRequestId).requestId;
+      logger.error({ err, requestId }, "getUserById failed");
       sendError(res, 500, "Internal server error");
     }
   };

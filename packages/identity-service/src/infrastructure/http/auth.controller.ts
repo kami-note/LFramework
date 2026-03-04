@@ -16,7 +16,7 @@ import {
 } from "../../application/dtos/oauth-callback-query.dto";
 import { formatExpiresIn } from "./utils/format-expires-in";
 import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
-import { sendError, logger } from "@lframework/shared";
+import { sendError, logger, type RequestWithRequestId } from "@lframework/shared";
 import { mapApplicationErrorToHttp } from "../../application/http/error-to-http.mapper";
 
 export class AuthController {
@@ -72,7 +72,9 @@ export class AuthController {
         return;
       }
       res.json(user);
-    } catch {
+    } catch (err) {
+      const requestId = (req as RequestWithRequestId).requestId;
+      logger.error({ err, requestId }, "getCurrentUser failed");
       sendError(res, 500, "Internal server error");
     }
   };

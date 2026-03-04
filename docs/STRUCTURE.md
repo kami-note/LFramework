@@ -32,6 +32,8 @@ packages/<serviço>/src/
 │   │   ├── create-<entidade>.use-case.ts
 │   │   ├── get-<entidade>-by-id.use-case.ts
 │   │   └── list-<entidades>.use-case.ts   # se fizer sentido
+│   ├── http/
+│   │   └── error-to-http.mapper.ts   # mapeia erros de aplicação → status HTTP (shared: HttpErrorMapping)
 │   ├── dtos/
 │   │   ├── create-<entidade>.dto.ts
 │   │   └── <entidade>-response.dto.ts
@@ -64,7 +66,7 @@ Se o arquivo não se encaixa em nenhuma pasta acima, a estrutura está errada ou
 | Use case | `application/use-cases/<ação>-<entidade>.use-case.ts` | `CreateUserUseCase`, `GetUserByIdUseCase` |
 | DTO | `application/dtos/create-<entidade>.dto.ts`, `<entidade>-response.dto.ts` | `CreateItemDto`, `ItemResponseDto` |
 | Controller | `infrastructure/http/<recurso>.controller.ts` | `UserController`, `ItemController` |
-| Validação | `infrastructure/http/<recurso>.validation.ts` | `validateCreateUser`, `validateCreateItem` |
+| Validação | `infrastructure/http/<recurso>.validation.ts` | `validateCreateUser = createValidateBody(createUserSchema)` (shared); idem para login/register/createItem. |
 | Repository (impl.) | `infrastructure/persistence/prisma-<entidade>.repository.ts` | `PrismaUserRepository` |
 
 ---
@@ -88,7 +90,7 @@ Exemplo: adicionar **Order** no catalog-service.
    - [ ] `infrastructure/persistence/prisma-order.repository.ts`
    - [ ] Migração Prisma e `prisma migrate dev`
    - [ ] `infrastructure/http/order.controller.ts` (use `sendError` do shared)
-   - [ ] `infrastructure/http/order.validation.ts` (use `sendValidationError` do shared)
+   - [ ] `infrastructure/http/order.validation.ts` (use `createValidateBody(schema)` do shared)
    - [ ] Em `routes.ts`: criar `createOrderRoutes(controller)` e registrar rotas
    - [ ] Em `container.ts`: instanciar repositório, use cases, controller e registrar rotas
 

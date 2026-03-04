@@ -48,6 +48,8 @@ pnpm dev:catalog    # http://localhost:3002
 
 Com o gateway no ar, use `http://localhost:8080` e os prefixos `/identity/` e `/catalog/` (ver [API.md](API.md)).
 
+**CORS e rate limit:** O identity-service usa CORS (variável `CORS_ORIGIN`) e rate limiting em register/login/OAuth; o catalog-service não expõe CORS nem rate limit. Se o catalog for consumido por browser no mesmo domínio do identity, pode não precisar de CORS; para endpoints sensíveis (ex.: POST /api/items), considere adicionar rate limit conforme [SECURITY.md](SECURITY.md).
+
 ---
 
 ## 5. Testes
@@ -56,7 +58,7 @@ Com o gateway no ar, use `http://localhost:8080` e os prefixos `/identity/` e `/
 pnpm test
 ```
 
-Roda Vitest em todos os pacotes (identity, catalog). Inclui testes de use cases, DTOs (validação Zod) e controllers. O shared não tem suite de testes própria hoje; a cobertura é indireta via serviços.
+Roda Vitest em todos os pacotes (shared, identity, catalog). O shared tem testes próprios em `packages/shared` (middlewares HTTP, sendError, sendValidationError, auth). Identity e catalog testam use cases, DTOs (validação Zod) e controllers.
 
 ---
 

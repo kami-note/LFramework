@@ -3,26 +3,27 @@ import { createContainer } from "./container";
 import {
   requestIdMiddleware,
   errorHandlerMiddleware,
-  type HealthResponseDto,
+  createHealthHandler,
+  logger,
 } from "@lframework/shared";
 
 const port = parseInt(process.env.CATALOG_SERVICE_PORT ?? "3002", 10);
 const isProduction = process.env.NODE_ENV === "production";
 
 if (isProduction && !process.env.CATALOG_DATABASE_URL) {
-  console.error("CATALOG_DATABASE_URL must be set in production");
+  logger.error("CATALOG_DATABASE_URL must be set in production");
   process.exit(1);
 }
 if (isProduction && !process.env.REDIS_URL) {
-  console.error("REDIS_URL must be set in production");
+  logger.error("REDIS_URL must be set in production");
   process.exit(1);
 }
 if (isProduction && !process.env.RABBITMQ_URL) {
-  console.error("RABBITMQ_URL must be set in production");
+  logger.error("RABBITMQ_URL must be set in production");
   process.exit(1);
 }
 if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
-  console.error("JWT_SECRET must be set and at least 32 characters in production");
+  logger.error("JWT_SECRET must be set and at least 32 characters in production");
   process.exit(1);
 }
 
@@ -32,7 +33,7 @@ const databaseUrl =
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
 const rabbitmqUrl =
   process.env.RABBITMQ_URL ?? "amqp://lframework:lframework@localhost:5672";
-const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "change-me-in-production-use-long-secret");
+const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "dev-secret-min-32-chars-for-jwt-signing");
 
 async function bootstrap() {
   const container = createContainer({
@@ -51,15 +52,12 @@ async function bootstrap() {
   app.use(express.json({ limit: "512kb" }));
   app.use("/api", container.itemRoutes);
 
-  app.get("/health", (_req, res) => {
-    const body: HealthResponseDto = { status: "ok", service: "catalog-service" };
-    res.json(body);
-  });
+  app.get("/health", createHealthHandler("catalog-service"));
 
   app.use(errorHandlerMiddleware);
 
   app.listen(port, () => {
-    console.log(`Catalog service listening on http://localhost:${port}`);
+    logger.info(`Catalog service listening on http://localhost:${port}`);
   });
 
   process.on("SIGTERM", async () => {
@@ -69,6 +67,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  console.error("Failed to start catalog-service:", err);
+  logger.error({ err }, "Failed to start catalog-service");
   process.exit(1);
 });

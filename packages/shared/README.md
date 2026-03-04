@@ -5,8 +5,8 @@ Pacote compartilhado do monorepo LFramework: infraestrutura HTTP, logging, erros
 ## Exports principais
 
 - **Logger:** `logger` (Pino; em dev usa pretty, em prod JSON)
-- **HTTP:** `asyncHandler`, `requestIdMiddleware`, `errorHandlerMiddleware`, `createAuthMiddleware`, `requireRole`, `sendError`, `sendValidationError`
-- **DTOs:** `HealthResponseDto`
+- **HTTP:** `asyncHandler`, `requestIdMiddleware`, `errorHandlerMiddleware`, `createAuthMiddleware`, `requireRole`, `sendError`, `sendValidationError`, `createHealthHandler`
+- **DTOs:** `HealthResponseDto`, `ErrorResponseDto`
 - **Erros:** `AppError`
 - **Cache:** adapters e tipos (`RedisCacheAdapter`, etc.)
 - **Eventos:** payloads e constantes (`UserCreatedPayload`, etc.)
@@ -30,6 +30,10 @@ const auth = createAuthMiddleware((token) => {
 
 app.use("/api/private", auth, privateRoutes);
 ```
+
+### Health (GET /health)
+
+Path recomendado: **GET /health**. Contrato do body: `{ status: string, service: string }`. Use `createHealthHandler("nome-do-serviço")` para registrar a rota.
 
 ### request-id + error-handler
 

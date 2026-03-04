@@ -20,7 +20,7 @@ O shared é o **núcleo do framework**. Contém o que vários serviços ou o eco
 |------|----------|
 | **Eventos** | Tipos de payload (ex.: `UserCreatedPayload`), nomes de eventos, constantes RabbitMQ (exchanges, filas). |
 | **DTOs** | `ErrorResponseDto` (`{ error: string }`) — formato padrão de erro da API. |
-| **HTTP** | `sendError(res, status, message)` e `sendValidationError(res, zodError)` — respostas de erro padronizadas (400, 401, 500, etc.). |
+| **HTTP** | `sendError`, `sendValidationError`, `createHealthHandler(serviceName)`, `createErrorToHttpMapper(mappings)`, `createValidateBody(schema)`; middlewares `requestIdMiddleware`, `errorHandlerMiddleware`, `createAuthMiddleware`, `requireRole`, `asyncHandler`; tipo `HttpErrorMapping`. |
 | **Schemas** | `nameSchema` (Zod): nome de exibição (trim, min 1, max 200, sem emoji/tags). Usado em identity (user name), catalog (item name) e validação do payload UserCreated no consumer. |
 | **Cache** | Porta `ICacheService` e adapter Redis (opcional por serviço). |
 | **Tipos** | Tipos e constantes compartilhados (ex.: RabbitMQ). |
