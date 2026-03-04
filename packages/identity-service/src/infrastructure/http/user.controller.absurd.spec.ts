@@ -3,11 +3,15 @@ import { UserController } from "./user.controller";
 import type { CreateUserUseCase } from "../../application/use-cases/create-user.use-case";
 import type { GetUserByIdUseCase } from "../../application/use-cases/get-user-by-id.use-case";
 import type { Response } from "express";
+import type { NextFunction } from "express";
+import { mapApplicationErrorToHttp } from "../../application/http/error-to-http.mapper";
+import { sendError } from "@lframework/shared";
 
 describe("UserController — cenários absurdos", () => {
   let createUserUseCase: CreateUserUseCase;
   let getUserByIdUseCase: GetUserByIdUseCase;
   let res: Partial<Response>;
+  let next: NextFunction;
 
   beforeEach(() => {
     createUserUseCase = { execute: vi.fn() } as unknown as CreateUserUseCase;
@@ -16,6 +20,10 @@ describe("UserController — cenários absurdos", () => {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
     };
+    next = ((err: unknown) => {
+      const { statusCode, message } = mapApplicationErrorToHttp(err);
+      sendError(res as Response, statusCode, message);
+    }) as NextFunction;
   });
 
   describe("getById", () => {
@@ -26,7 +34,7 @@ describe("UserController — cenários absurdos", () => {
         userId: "11111111-1111-1111-1111-111111111111",
         userRole: "user",
       } as any;
-      await controller.getById(req, res as Response);
+      await controller.getById(req, res as Response, next);
       // Deve responder 400 (uuid inválido) em vez de quebrar
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: "Invalid user id format" });
@@ -39,7 +47,7 @@ describe("UserController — cenários absurdos", () => {
         userId: "11111111-1111-1111-1111-111111111111",
         userRole: "user",
       } as any;
-      await controller.getById(req, res as Response);
+      await controller.getById(req, res as Response, next);
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
@@ -50,7 +58,7 @@ describe("UserController — cenários absurdos", () => {
         userId: "11111111-1111-1111-1111-111111111111",
         userRole: "user",
       } as any;
-      await controller.getById(req, res as Response);
+      await controller.getById(req, res as Response, next);
       expect(res.status).toHaveBeenCalledWith(400);
       expect(getUserByIdUseCase.execute).not.toHaveBeenCalled();
     });
@@ -61,7 +69,7 @@ describe("UserController — cenários absurdos", () => {
       vi.mocked(createUserUseCase.execute).mockRejectedValue(new Error("body undefined"));
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { body: undefined, userId: "admin-1", userRole: "admin" } as any;
-      await controller.create(req, res as Response);
+      await controller.create(req, res as Response, next);
       expect(res.status).toHaveBeenCalledWith(500);
     });
 
@@ -69,7 +77,7 @@ describe("UserController — cenários absurdos", () => {
       vi.mocked(createUserUseCase.execute).mockRejectedValue(new Error("null"));
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { body: null, userId: "admin-1", userRole: "admin" } as any;
-      await controller.create(req, res as Response);
+      await controller.create(req, res as Response, next);
       expect(createUserUseCase.execute).toHaveBeenCalled();
     });
   });

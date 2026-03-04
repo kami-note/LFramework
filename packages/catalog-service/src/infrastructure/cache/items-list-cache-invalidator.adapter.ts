@@ -1,5 +1,5 @@
 import type { IItemsListCacheInvalidator } from "../../application/ports/items-list-cache-invalidator.port";
-import type { ICacheService } from "../../application/ports/cache.port";
+import type { ICacheService } from "@lframework/shared";
 
 const ITEMS_LIST_KEY = "items:list";
 

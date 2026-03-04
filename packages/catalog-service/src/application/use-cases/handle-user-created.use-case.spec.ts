@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HandleUserCreatedUseCase } from "./handle-user-created.use-case";
-import type { ICacheService } from "../ports/cache.port";
+import type { ICacheService } from "@lframework/shared";
 
 describe("HandleUserCreatedUseCase", () => {
   let cache: ICacheService;

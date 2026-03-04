@@ -23,6 +23,7 @@ import { AuthController } from "./infrastructure/http/auth.controller";
 import { createAuthMiddleware } from "@lframework/shared";
 import { createUserRoutes } from "./infrastructure/http/routes";
 import { createAuthRoutes } from "./infrastructure/http/auth.routes";
+import { mapApplicationErrorToHttp } from "./application/http/error-to-http.mapper";
 
 export interface ContainerConfig {
   databaseUrl: string;
@@ -111,6 +112,7 @@ export function createContainer(config: ContainerConfig) {
     redis,
     userRoutes,
     authRoutes,
+    mapApplicationErrorToHttp,
     async connectRabbitMQ(): Promise<void> {
       await eventPublisher.connect();
     },

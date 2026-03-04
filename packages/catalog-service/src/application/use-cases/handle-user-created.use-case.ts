@@ -1,6 +1,6 @@
 import type { UserCreatedPayload } from "@lframework/shared";
 import { logger } from "@lframework/shared";
-import type { ICacheService } from "../ports/cache.port";
+import type { ICacheService } from "@lframework/shared";
 
 /**
  * Use case: processa o evento UserCreated (publicado pelo Identity Service).

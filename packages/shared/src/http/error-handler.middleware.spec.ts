@@ -9,7 +9,7 @@ vi.mock("../logger", () => ({
 }));
 
 import { logger } from "../logger";
-import { errorHandlerMiddleware } from "./error-handler.middleware";
+import { errorHandlerMiddleware, createErrorHandlerMiddleware } from "./error-handler.middleware";
 
 describe("errorHandlerMiddleware", () => {
   let req: Partial<Request & { requestId?: string }>;
@@ -43,5 +43,40 @@ describe("errorHandlerMiddleware", () => {
 
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).not.toHaveBeenCalled();
+  });
+});
+
+describe("createErrorHandlerMiddleware", () => {
+  let req: Partial<Request & { requestId?: string }>;
+  let res: Partial<Response>;
+  let next: NextFunction;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    req = {};
+    res = { headersSent: false, status: vi.fn().mockReturnThis(), json: vi.fn() };
+    next = vi.fn();
+  });
+
+  it("com mapper: usa status e mensagem do mapeamento", () => {
+    const mapper = vi.fn().mockReturnValue({ statusCode: 409, message: "Conflict" });
+    const handler = createErrorHandlerMiddleware(mapper);
+    const err = new Error("User exists");
+
+    handler(err, req as Request, res as Response, next);
+
+    expect(mapper).toHaveBeenCalledWith(err);
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect((res.json as ReturnType<typeof vi.fn>).mock.calls[0][0]).toEqual({ error: "Conflict" });
+  });
+
+  it("sem mapper: responde 500 como errorHandlerMiddleware", () => {
+    const handler = createErrorHandlerMiddleware();
+    handler(new Error("x"), req as Request, res as Response, next);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect((res.json as ReturnType<typeof vi.fn>).mock.calls[0][0]).toEqual({
+      error: "Internal server error",
+    });
   });
 });

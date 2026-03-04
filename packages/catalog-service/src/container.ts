@@ -12,6 +12,7 @@ import { ItemController } from "./infrastructure/http/item.controller";
 import { createItemRoutes } from "./infrastructure/http/routes";
 import jwt from "jsonwebtoken";
 import { createAuthMiddleware } from "@lframework/shared";
+import { mapApplicationErrorToHttp } from "./application/http/error-to-http.mapper";
 
 export function createContainer(config: {
   databaseUrl: string;
@@ -51,6 +52,7 @@ export function createContainer(config: {
     prisma,
     redis,
     itemRoutes,
+    mapApplicationErrorToHttp,
     handleUserCreatedUseCase,
     async connectRabbitMQ(userCreatedHandler: (payload: UserCreatedPayload) => Promise<void>): Promise<void> {
       eventConsumer.onUserCreated(userCreatedHandler);

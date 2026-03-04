@@ -1,7 +1,7 @@
 import { USER_CREATED_EVENT } from "@lframework/shared";
 import type { IUserCreatedNotifier, UserCreatedNotifyInput } from "../../application/ports/user-created-notifier.port";
 import type { IEventPublisher } from "../../application/ports/event-publisher.port";
-import type { ICacheService } from "../../application/ports/cache.port";
+import type { ICacheService } from "@lframework/shared";
 
 /**
  * Adapter: publica USER_CREATED e grava usuário no cache.

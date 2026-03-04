@@ -2,7 +2,7 @@ import express from "express";
 import { createContainer } from "./container";
 import {
   requestIdMiddleware,
-  errorHandlerMiddleware,
+  createErrorHandlerMiddleware,
   createHealthHandler,
   logger,
 } from "@lframework/shared";
@@ -54,7 +54,7 @@ async function bootstrap() {
 
   app.get("/health", createHealthHandler("catalog-service"));
 
-  app.use(errorHandlerMiddleware);
+  app.use(createErrorHandlerMiddleware(container.mapApplicationErrorToHttp));
 
   app.listen(port, () => {
     logger.info(`Catalog service listening on http://localhost:${port}`);

@@ -3,15 +3,19 @@ import { UserController } from "./user.controller";
 import type { CreateUserUseCase } from "../../application/use-cases/create-user.use-case";
 import type { GetUserByIdUseCase } from "../../application/use-cases/get-user-by-id.use-case";
 import type { Response } from "express";
+import type { NextFunction } from "express";
 import {
   UserAlreadyExistsError,
   InvalidEmailError,
 } from "../../application/errors";
+import { mapApplicationErrorToHttp } from "../../application/http/error-to-http.mapper";
+import { sendError } from "@lframework/shared";
 
 describe("UserController", () => {
   let createUserUseCase: CreateUserUseCase;
   let getUserByIdUseCase: GetUserByIdUseCase;
   let res: Partial<Response>;
+  let next: NextFunction;
 
   beforeEach(() => {
     createUserUseCase = { execute: vi.fn() } as unknown as CreateUserUseCase;
@@ -20,6 +24,10 @@ describe("UserController", () => {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
     };
+    next = ((err: unknown) => {
+      const { statusCode, message } = mapApplicationErrorToHttp(err);
+      sendError(res as Response, statusCode, message);
+    }) as NextFunction;
   });
 
   describe("create", () => {
@@ -34,7 +42,7 @@ describe("UserController", () => {
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { body: { email: "u@example.com", name: "Nome" }, userId: "admin-1", userRole: "admin" } as any;
-      await controller.create(req, res as Response);
+      await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(created);
@@ -47,7 +55,7 @@ describe("UserController", () => {
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { body: { email: "existente@example.com", name: "X" }, userId: "a", userRole: "admin" } as any;
-      await controller.create(req, res as Response);
+      await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.json).toHaveBeenCalledWith({ error: "User with this email already exists" });
@@ -58,7 +66,7 @@ describe("UserController", () => {
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { body: { email: "invalido", name: "X" }, userId: "a", userRole: "admin" } as any;
-      await controller.create(req, res as Response);
+      await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: "Invalid email" });
@@ -69,7 +77,7 @@ describe("UserController", () => {
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { body: { email: "u@example.com", name: "X" }, userId: "a", userRole: "admin" } as any;
-      await controller.create(req, res as Response);
+      await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
@@ -92,7 +100,7 @@ describe("UserController", () => {
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { params: { id: uuidOwner }, userId: uuidOwner, userRole: "user" } as any;
-      await controller.getById(req, res as Response);
+      await controller.getById(req, res as Response, next);
 
       expect(res.json).toHaveBeenCalledWith(user);
       expect(getUserByIdUseCase.execute).toHaveBeenCalledWith(uuidOwner);
@@ -101,7 +109,7 @@ describe("UserController", () => {
     it("deve retornar 400 quando id não é UUID", async () => {
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { params: { id: "nao-uuid" }, userId: uuidOwner, userRole: "user" } as any;
-      await controller.getById(req, res as Response);
+      await controller.getById(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: "Invalid user id format" });
@@ -111,7 +119,7 @@ describe("UserController", () => {
     it("deve retornar 403 quando requester não é o dono nem admin", async () => {
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { params: { id: uuidOther }, userId: uuidOwner, userRole: "user" } as any;
-      await controller.getById(req, res as Response);
+      await controller.getById(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({ error: "Forbidden" });
@@ -124,7 +132,7 @@ describe("UserController", () => {
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { params: { id: uuidOther }, userId: uuidAdmin, userRole: "admin" } as any;
-      await controller.getById(req, res as Response);
+      await controller.getById(req, res as Response, next);
 
       expect(res.json).toHaveBeenCalledWith(user);
       expect(getUserByIdUseCase.execute).toHaveBeenCalledWith(uuidOther);
@@ -135,7 +143,7 @@ describe("UserController", () => {
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { params: { id: uuidOwner }, userId: uuidOwner, userRole: "user" } as any;
-      await controller.getById(req, res as Response);
+      await controller.getById(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: "User not found" });
@@ -146,7 +154,7 @@ describe("UserController", () => {
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
       const req = { params: { id: uuidOwner }, userId: uuidOwner, userRole: "user" } as any;
-      await controller.getById(req, res as Response);
+      await controller.getById(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });

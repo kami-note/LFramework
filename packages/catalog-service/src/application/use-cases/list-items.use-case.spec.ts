@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ListItemsUseCase } from "./list-items.use-case";
 import { Item } from "../../domain/entities/item.entity";
 import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
-import type { ICacheService } from "../ports/cache.port";
+import type { ICacheService } from "@lframework/shared";
 
 describe("ListItemsUseCase", () => {
   let itemRepository: IItemRepository;

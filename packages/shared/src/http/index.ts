@@ -6,7 +6,10 @@ export { sendValidationError } from "./send-validation-error";
 export { createValidateBody } from "./validate-body";
 export { asyncHandler } from "./async-handler";
 export { requestIdMiddleware, type RequestWithRequestId } from "./request-id.middleware";
-export { errorHandlerMiddleware } from "./error-handler.middleware";
+export {
+  errorHandlerMiddleware,
+  createErrorHandlerMiddleware,
+} from "./error-handler.middleware";
 export {
   createAuthMiddleware,
   requireRole,

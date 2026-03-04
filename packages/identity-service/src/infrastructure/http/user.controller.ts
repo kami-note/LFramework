@@ -1,11 +1,10 @@
-import { Response } from "express";
+import { Response, NextFunction } from "express";
 import { z } from "zod";
 import { CreateUserUseCase } from "../../application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "../../application/use-cases/get-user-by-id.use-case";
-import { mapApplicationErrorToHttp } from "../../application/http/error-to-http.mapper";
 import type { CreateUserDto } from "../../application/dtos/create-user.dto";
 import type { AuthenticatedRequest } from "@lframework/shared";
-import { sendError, logger, type RequestWithRequestId } from "@lframework/shared";
+import { sendError } from "@lframework/shared";
 
 const uuidParamSchema = z.string().uuid();
 
@@ -19,18 +18,17 @@ export class UserController {
     private readonly getUserByIdUseCase: GetUserByIdUseCase
   ) {}
 
-  create = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  create = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: CreateUserDto = req.body;
       const result = await this.createUserUseCase.execute(dto);
       res.status(201).json(result);
     } catch (err) {
-      const { statusCode, message } = mapApplicationErrorToHttp(err);
-      sendError(res, statusCode, message);
+      next(err);
     }
   };
 
-  getById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
       const parsed = uuidParamSchema.safeParse(id);
@@ -50,9 +48,7 @@ export class UserController {
       }
       res.json(user);
     } catch (err) {
-      const requestId = (req as RequestWithRequestId).requestId;
-      logger.error({ err, requestId }, "getUserById failed");
-      sendError(res, 500, "Internal server error");
+      next(err);
     }
   };
 }

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GetUserByIdUseCase } from "./get-user-by-id.use-case";
 import { User } from "../../domain/entities/user.entity";
 import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
-import type { ICacheService } from "../ports/cache.port";
+import type { ICacheService } from "@lframework/shared";
 
 describe("GetUserByIdUseCase", () => {
   let userRepository: IUserRepository;

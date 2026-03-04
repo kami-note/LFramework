@@ -1,4 +1,3 @@
-export * from "./cache.port";
 export * from "./event-publisher.port";
 export * from "./token-service.port";
 export * from "./password-hasher.port";

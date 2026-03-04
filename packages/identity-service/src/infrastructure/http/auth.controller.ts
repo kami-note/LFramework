@@ -1,11 +1,11 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import type { AuthenticatedRequest } from "@lframework/shared";
 import type { RegisterUseCase } from "../../application/use-cases/register.use-case";
 import type { LoginUseCase } from "../../application/use-cases/login.use-case";
 import type { GetCurrentUserUseCase } from "../../application/use-cases/get-current-user.use-case";
 import type { OAuthCallbackUseCase } from "../../application/use-cases/oauth-callback.use-case";
 import type { IOAuthProvider } from "../../application/ports/oauth-provider.port";
-import type { ICacheService } from "../../application/ports/cache.port";
+import type { ICacheService } from "@lframework/shared";
 import type { RegisterDto } from "../../application/dtos/register.dto";
 import type { LoginDto } from "../../application/dtos/login.dto";
 import type { AuthResponseDto } from "../../application/dtos/auth-response.dto";
@@ -16,8 +16,7 @@ import {
 } from "../../application/dtos/oauth-callback-query.dto";
 import { formatExpiresIn } from "./utils/format-expires-in";
 import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
-import { sendError, logger, type RequestWithRequestId } from "@lframework/shared";
-import { mapApplicationErrorToHttp } from "../../application/http/error-to-http.mapper";
+import { sendError, sendValidationError } from "@lframework/shared";
 
 export class AuthController {
   constructor(
@@ -32,7 +31,7 @@ export class AuthController {
     private readonly jwtExpiresInSeconds: number
   ) {}
 
-  register = async (req: Request, res: Response): Promise<void> => {
+  register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: RegisterDto = req.body;
       const result = await this.registerUseCase.execute(dto);
@@ -43,12 +42,11 @@ export class AuthController {
       };
       res.status(201).json(body);
     } catch (err) {
-      const { statusCode, message } = mapApplicationErrorToHttp(err);
-      sendError(res, statusCode, message);
+      next(err);
     }
   };
 
-  login = async (req: Request, res: Response): Promise<void> => {
+  login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: LoginDto = req.body;
       const result = await this.loginUseCase.execute(dto);
@@ -59,12 +57,11 @@ export class AuthController {
       };
       res.json(body);
     } catch (err) {
-      const { statusCode, message } = mapApplicationErrorToHttp(err);
-      sendError(res, statusCode, message);
+      next(err);
     }
   };
 
-  me = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  me = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = await this.getCurrentUserUseCase.execute(req.userId);
       if (!user) {
@@ -73,9 +70,7 @@ export class AuthController {
       }
       res.json(user);
     } catch (err) {
-      const requestId = (req as RequestWithRequestId).requestId;
-      logger.error({ err, requestId }, "getCurrentUser failed");
-      sendError(res, 500, "Internal server error");
+      next(err);
     }
   };
 
@@ -87,8 +82,8 @@ export class AuthController {
     await performOAuthRedirect(this.googleProvider, "google", res, this.cache, this.baseUrl);
   };
 
-  googleCallback = async (req: Request, res: Response): Promise<void> => {
-    await this.handleOAuthCallback(req, res, this.googleProvider, "google");
+  googleCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    await this.handleOAuthCallback(req, res, next, this.googleProvider, "google");
   };
 
   githubRedirect = async (req: Request, res: Response): Promise<void> => {
@@ -99,13 +94,14 @@ export class AuthController {
     await performOAuthRedirect(this.githubProvider, "github", res, this.cache, this.baseUrl);
   };
 
-  githubCallback = async (req: Request, res: Response): Promise<void> => {
-    await this.handleOAuthCallback(req, res, this.githubProvider, "github");
+  githubCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    await this.handleOAuthCallback(req, res, next, this.githubProvider, "github");
   };
 
   private handleOAuthCallback = async (
     req: Request,
     res: Response,
+    next: NextFunction,
     provider: IOAuthProvider | null,
     providerName: string
   ): Promise<void> => {
@@ -117,8 +113,7 @@ export class AuthController {
     const state = Array.isArray(req.query.state) ? req.query.state[0] : req.query.state;
     const parsed = oauthCallbackQuerySchema.safeParse({ code, state });
     if (!parsed.success) {
-      const message = parsed.error.errors[0]?.message ?? "Invalid query";
-      sendError(res, 400, message);
+      sendValidationError(res, parsed.error);
       return;
     }
     const query: OAuthCallbackQueryDto = parsed.data;
@@ -140,9 +135,7 @@ export class AuthController {
       };
       res.json(body);
     } catch (err) {
-      const safeMessage = err instanceof Error ? err.message : "Unknown error";
-      logger.error({ err, providerName }, "OAuth callback failed");
-      sendError(res, 400, "OAuth failed");
+      next(err);
     }
   };
 }
