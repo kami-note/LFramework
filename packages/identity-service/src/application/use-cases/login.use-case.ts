@@ -38,6 +38,7 @@ export class LoginUseCase {
     const accessToken = this.tokenService.sign({
       sub: user.id,
       email: user.email.value,
+      role: user.role,
     });
 
     return {

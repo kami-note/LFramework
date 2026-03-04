@@ -1,10 +1,17 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { ItemController } from "./item.controller";
 import { validateCreateItem } from "./item.validation";
 
-export function createItemRoutes(controller: ItemController): Router {
+/**
+ * Política de acesso: GET /api/items é público (listagem).
+ * POST /api/items exige autenticação JWT (apenas usuários autenticados podem criar itens).
+ */
+export function createItemRoutes(
+  controller: ItemController,
+  authMiddleware: (req: Request, res: Response, next: NextFunction) => void
+): Router {
   const router = Router();
-  router.post("/items", validateCreateItem, controller.create);
   router.get("/items", controller.list);
+  router.post("/items", authMiddleware, validateCreateItem, controller.create);
   return router;
 }

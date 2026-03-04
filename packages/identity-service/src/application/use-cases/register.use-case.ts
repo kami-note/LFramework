@@ -70,6 +70,7 @@ export class RegisterUseCase {
     const accessToken = this.tokenService.sign({
       sub: user.id,
       email: user.email.value,
+      role: "user",
     });
 
     return {

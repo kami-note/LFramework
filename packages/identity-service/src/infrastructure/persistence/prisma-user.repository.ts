@@ -21,11 +21,13 @@ export class PrismaUserRepository implements IUserRepository {
         id: user.id,
         email: user.email.value,
         name: user.name,
+        role: user.role,
         createdAt: user.createdAt,
       },
       update: {
         email: user.email.value,
         name: user.name,
+        role: user.role,
       },
     });
     } catch (err) {
@@ -41,7 +43,7 @@ export class PrismaUserRepository implements IUserRepository {
       where: { id },
     });
     if (!row) return null;
-    return User.reconstitute(row.id, row.email, row.name, row.createdAt);
+    return User.reconstitute(row.id, row.email, row.name, row.createdAt, row.role);
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -49,6 +51,6 @@ export class PrismaUserRepository implements IUserRepository {
       where: { email },
     });
     if (!row) return null;
-    return User.reconstitute(row.id, row.email, row.name, row.createdAt);
+    return User.reconstitute(row.id, row.email, row.name, row.createdAt, row.role);
   }
 }

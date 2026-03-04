@@ -7,12 +7,13 @@ declare global {
     interface Request {
       userId?: string;
       userEmail?: string;
+      userRole?: string;
     }
   }
 }
 
 /**
- * Middleware: valida Bearer JWT e anexa userId/userEmail em req.
+ * Middleware: valida Bearer JWT e anexa userId, userEmail e userRole em req.
  */
 export function createAuthMiddleware(tokenService: ITokenService) {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -31,6 +32,22 @@ export function createAuthMiddleware(tokenService: ITokenService) {
     }
     req.userId = payload.sub;
     req.userEmail = payload.email;
+    req.userRole = payload.role ?? "user";
+    next();
+  };
+}
+
+/**
+ * Middleware: exige que o usuário autenticado tenha a role indicada.
+ * Deve ser usado após createAuthMiddleware.
+ */
+export function requireRole(role: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (req.userRole !== role) {
+      const body: ErrorResponseDto = { error: "Forbidden" };
+      res.status(403).json(body);
+      return;
+    }
     next();
   };
 }

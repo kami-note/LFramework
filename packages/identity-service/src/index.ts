@@ -4,10 +4,24 @@ import { createContainer } from "./container";
 import type { HealthResponseDto } from "./infrastructure/http/dtos/health-response.dto";
 
 const port = parseInt(process.env.IDENTITY_SERVICE_PORT ?? "3001", 10);
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction && !process.env.IDENTITY_DATABASE_URL) {
+  console.error("IDENTITY_DATABASE_URL must be set in production");
+  process.exit(1);
+}
+if (isProduction && !process.env.REDIS_URL) {
+  console.error("REDIS_URL must be set in production");
+  process.exit(1);
+}
+if (isProduction && !process.env.RABBITMQ_URL) {
+  console.error("RABBITMQ_URL must be set in production");
+  process.exit(1);
+}
+
 const databaseUrl = process.env.IDENTITY_DATABASE_URL ?? "postgresql://lframework:lframework@localhost:5432/lframework_identity";
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
 const rabbitmqUrl = process.env.RABBITMQ_URL ?? "amqp://lframework:lframework@localhost:5672";
-const isProduction = process.env.NODE_ENV === "production";
 const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "change-me-in-production-use-long-secret");
 const jwtExpiresInSeconds = parseInt(process.env.JWT_EXPIRES_IN_SECONDS ?? "604800", 10); // 7 days
 const baseUrl = process.env.BASE_URL ?? `http://localhost:${port}`;

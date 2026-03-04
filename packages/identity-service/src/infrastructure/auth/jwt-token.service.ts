@@ -13,8 +13,9 @@ export class JwtTokenService implements ITokenService {
   constructor(private readonly config: JwtTokenServiceConfig) {}
 
   sign(payload: Omit<TokenPayload, "iat" | "exp">): string {
+    const { sub, email, role } = payload;
     return jwt.sign(
-      payload,
+      { sub, email, role: role ?? "user" },
       this.config.secret,
       { expiresIn: this.config.expiresInSeconds, algorithm: "HS256" }
     );
@@ -24,8 +25,11 @@ export class JwtTokenService implements ITokenService {
     try {
       const decoded = jwt.verify(token, this.config.secret, {
         algorithms: ["HS256"],
-      }) as TokenPayload;
-      return decoded;
+      }) as TokenPayload & { role?: string };
+      return {
+        ...decoded,
+        role: decoded.role ?? "user",
+      };
     } catch {
       return null;
     }

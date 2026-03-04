@@ -9,23 +9,25 @@ export class User {
     private readonly _id: string,
     private _email: Email,
     private _name: string,
+    private readonly _role: string,
     private readonly _createdAt: Date
   ) {}
 
-  static create(id: string, email: Email, name: string): User {
+  static create(id: string, email: Email, name: string, role: string = "user"): User {
     if (!name || name.trim().length === 0) {
       throw new Error("Name is required");
     }
-    return new User(id, email, name.trim(), new Date());
+    return new User(id, email, name.trim(), role, new Date());
   }
 
   static reconstitute(
     id: string,
     email: string,
     name: string,
-    createdAt: Date
+    createdAt: Date,
+    role: string = "user"
   ): User {
-    return new User(id, Email.create(email), name, createdAt);
+    return new User(id, Email.create(email), name, role, createdAt);
   }
 
   get id(): string {
@@ -38,6 +40,10 @@ export class User {
 
   get name(): string {
     return this._name;
+  }
+
+  get role(): string {
+    return this._role;
   }
 
   get createdAt(): Date {

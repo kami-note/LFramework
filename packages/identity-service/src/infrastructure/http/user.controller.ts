@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { z } from "zod";
 import { CreateUserUseCase } from "../../application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "../../application/use-cases/get-user-by-id.use-case";
 import {
@@ -7,6 +8,8 @@ import {
 } from "../../application/errors";
 import type { CreateUserDto } from "../../application/dtos/create-user.dto";
 import type { ErrorResponseDto } from "../../application/dtos/error-response.dto";
+
+const uuidParamSchema = z.string().uuid();
 
 /**
  * Adapter (entrada): controller HTTP que delega aos casos de uso.
@@ -39,7 +42,17 @@ export class UserController {
   getById = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const user = await this.getUserByIdUseCase.execute(id);
+      const parsed = uuidParamSchema.safeParse(id);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid user id format" } as ErrorResponseDto);
+        return;
+      }
+      const userId = parsed.data;
+      if (req.userId !== userId && req.userRole !== "admin") {
+        res.status(403).json({ error: "Forbidden" } as ErrorResponseDto);
+        return;
+      }
+      const user = await this.getUserByIdUseCase.execute(userId);
       if (!user) {
         res.status(404).json({ error: "User not found" } as ErrorResponseDto);
         return;

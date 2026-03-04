@@ -26,6 +26,7 @@ export class PrismaUserOAuthRegistrationPersistence implements IUserOAuthRegistr
             id: user.id,
             email: user.email.value,
             name: user.name,
+            role: user.role,
             createdAt: user.createdAt,
           },
         }),

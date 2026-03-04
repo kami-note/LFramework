@@ -44,6 +44,7 @@ export class OAuthCallbackUseCase {
       const accessToken = this.tokenService.sign({
         sub: user.id,
         email: user.email.value,
+        role: user.role,
       });
       return {
         user: {
@@ -96,6 +97,7 @@ export class OAuthCallbackUseCase {
     const accessToken = this.tokenService.sign({
       sub: user.id,
       email: user.email.value,
+      role: user.role,
     });
 
     return {

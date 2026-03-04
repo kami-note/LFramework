@@ -3,6 +3,13 @@ import rateLimit from "express-rate-limit";
 import { AuthController } from "./auth.controller";
 import { validateRegister, validateLogin } from "./auth.validation";
 
+/**
+ * Logout: não há endpoint de logout no servidor. O logout é feito no cliente
+ * descartando o token (remover do storage/localStorage e não enviar mais o
+ * header Authorization). Tokens JWT permanecem válidos até o exp; para
+ * revogação antecipada seria necessário um mecanismo adicional (ex.: blacklist).
+ */
+
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
   max: 20, // login + register combined per IP

@@ -8,11 +8,13 @@ import { CreateItemUseCase } from "./application/use-cases/create-item.use-case"
 import { ListItemsUseCase } from "./application/use-cases/list-items.use-case";
 import { ItemController } from "./infrastructure/http/item.controller";
 import { createItemRoutes } from "./infrastructure/http/routes";
+import { createCatalogAuthMiddleware } from "./infrastructure/http/auth.middleware";
 
 export function createContainer(config: {
   databaseUrl: string;
   redisUrl: string;
   rabbitmqUrl: string;
+  jwtSecret: string;
 }) {
   const prisma = new PrismaClient({
     datasources: { db: { url: config.databaseUrl } },
@@ -26,7 +28,8 @@ export function createContainer(config: {
   const listItemsUseCase = new ListItemsUseCase(itemRepository, cache);
 
   const itemController = new ItemController(createItemUseCase, listItemsUseCase);
-  const itemRoutes = createItemRoutes(itemController);
+  const authMiddleware = createCatalogAuthMiddleware(config.jwtSecret);
+  const itemRoutes = createItemRoutes(itemController, authMiddleware);
 
   const eventConsumer: RabbitMqUserEventsAdapter = new RabbitMqUserEventsAdapter(config.rabbitmqUrl);
 
