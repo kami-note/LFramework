@@ -1,5 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
+import { asyncHandler } from "@lframework/shared";
+
+type AsyncRequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>;
 import { AuthController } from "./auth.controller";
 import { validateRegister, validateLogin } from "./auth.validation";
 
@@ -32,15 +35,15 @@ export function createAuthRoutes(
 ): Router {
   const router = Router();
 
-  router.post("/auth/register", authRateLimiter, validateRegister, controller.register);
-  router.post("/auth/login", authRateLimiter, validateLogin, controller.login);
-  router.get("/auth/me", authMiddleware, controller.me as (req: Request, res: Response) => Promise<void>);
+  router.post("/auth/register", authRateLimiter, validateRegister, asyncHandler(controller.register.bind(controller)));
+  router.post("/auth/login", authRateLimiter, validateLogin, asyncHandler(controller.login.bind(controller)));
+  router.get("/auth/me", authMiddleware, asyncHandler(controller.me.bind(controller) as AsyncRequestHandler));
 
-  router.get("/auth/google", oauthRateLimiter, controller.googleRedirect);
-  router.get("/auth/google/callback", oauthRateLimiter, controller.googleCallback);
+  router.get("/auth/google", oauthRateLimiter, asyncHandler(controller.googleRedirect.bind(controller)));
+  router.get("/auth/google/callback", oauthRateLimiter, asyncHandler(controller.googleCallback.bind(controller)));
 
-  router.get("/auth/github", oauthRateLimiter, controller.githubRedirect);
-  router.get("/auth/github/callback", oauthRateLimiter, controller.githubCallback);
+  router.get("/auth/github", oauthRateLimiter, asyncHandler(controller.githubRedirect.bind(controller)));
+  router.get("/auth/github/callback", oauthRateLimiter, asyncHandler(controller.githubCallback.bind(controller)));
 
   return router;
 }

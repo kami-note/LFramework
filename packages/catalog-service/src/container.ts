@@ -9,7 +9,8 @@ import { ListItemsUseCase } from "./application/use-cases/list-items.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
 import { ItemController } from "./infrastructure/http/item.controller";
 import { createItemRoutes } from "./infrastructure/http/routes";
-import { createCatalogAuthMiddleware } from "./infrastructure/http/auth.middleware";
+import jwt from "jsonwebtoken";
+import { createAuthMiddleware } from "@lframework/shared";
 
 export function createContainer(config: {
   databaseUrl: string;
@@ -30,7 +31,16 @@ export function createContainer(config: {
   const handleUserCreatedUseCase = new HandleUserCreatedUseCase(cache);
 
   const itemController = new ItemController(createItemUseCase, listItemsUseCase);
-  const authMiddleware = createCatalogAuthMiddleware(config.jwtSecret);
+  const authMiddleware = createAuthMiddleware((token) => {
+    try {
+      const decoded = jwt.verify(token, config.jwtSecret, {
+        algorithms: ["HS256"],
+      }) as { sub?: string };
+      return decoded.sub ? { sub: decoded.sub } : null;
+    } catch {
+      return null;
+    }
+  });
   const itemRoutes = createItemRoutes(itemController, authMiddleware);
 
   const eventConsumer: RabbitMqUserEventsAdapter = new RabbitMqUserEventsAdapter(config.rabbitmqUrl);

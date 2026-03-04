@@ -3,7 +3,7 @@ import { CreateItemUseCase } from "../../application/use-cases/create-item.use-c
 import { ListItemsUseCase } from "../../application/use-cases/list-items.use-case";
 import { InvalidItemError } from "../../application/errors";
 import type { CreateItemDto } from "../../application/dtos/create-item.dto";
-import type { AuthenticatedRequest } from "./auth.middleware";
+import type { AuthenticatedRequest } from "@lframework/shared";
 import { sendError } from "@lframework/shared";
 
 export class ItemController {

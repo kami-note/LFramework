@@ -7,7 +7,7 @@ import {
   InvalidEmailError,
 } from "../../application/errors";
 import type { CreateUserDto } from "../../application/dtos/create-user.dto";
-import type { AuthenticatedRequest } from "./auth.middleware";
+import type { AuthenticatedRequest } from "@lframework/shared";
 import { sendError } from "@lframework/shared";
 
 const uuidParamSchema = z.string().uuid();

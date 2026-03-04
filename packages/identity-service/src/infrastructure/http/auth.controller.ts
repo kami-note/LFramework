@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import type { AuthenticatedRequest } from "./auth.middleware";
+import type { AuthenticatedRequest } from "@lframework/shared";
 import type { RegisterUseCase } from "../../application/use-cases/register.use-case";
 import type { LoginUseCase } from "../../application/use-cases/login.use-case";
 import type { GetCurrentUserUseCase } from "../../application/use-cases/get-current-user.use-case";

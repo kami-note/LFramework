@@ -19,7 +19,7 @@ import { GetCurrentUserUseCase } from "./application/use-cases/get-current-user.
 import { OAuthCallbackUseCase } from "./application/use-cases/oauth-callback.use-case";
 import { UserController } from "./infrastructure/http/user.controller";
 import { AuthController } from "./infrastructure/http/auth.controller";
-import { createAuthMiddleware } from "./infrastructure/http/auth.middleware";
+import { createAuthMiddleware } from "@lframework/shared";
 import { createUserRoutes } from "./infrastructure/http/routes";
 import { createAuthRoutes } from "./infrastructure/http/auth.routes";
 
@@ -102,7 +102,7 @@ export function createContainer(config: ContainerConfig) {
     config.jwtExpiresInSeconds
   );
 
-  const authMiddleware = createAuthMiddleware(tokenService);
+  const authMiddleware = createAuthMiddleware((token) => tokenService.verify(token));
   const userRoutes = createUserRoutes(userController, authMiddleware);
   const authRoutes = createAuthRoutes(authController, authMiddleware);
 

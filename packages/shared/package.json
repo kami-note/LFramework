@@ -7,15 +7,21 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "echo 'No tests in shared'"
+    "test": "vitest run"
   },
   "dependencies": {
     "express": "^4.21.0",
     "ioredis": "^5.3.2",
+    "pino": "^9.5.0",
     "zod": "^3.23.8"
+  },
+  "optionalDependencies": {
+    "pino-pretty": "^11.3.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
-    "typescript": "^5.3.0"
+    "@types/node": "^22.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^2.1.0"
   }
 }

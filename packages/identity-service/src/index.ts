@@ -1,9 +1,11 @@
 import express from "express";
 import cors from "cors";
 import { createContainer } from "./container";
-import type { HealthResponseDto } from "./infrastructure/http/dtos/health-response.dto";
-import { requestIdMiddleware } from "./infrastructure/request-id.middleware";
-import { errorHandlerMiddleware } from "./infrastructure/error-handler.middleware";
+import {
+  requestIdMiddleware,
+  errorHandlerMiddleware,
+  type HealthResponseDto,
+} from "@lframework/shared";
 
 const port = parseInt(process.env.IDENTITY_SERVICE_PORT ?? "3001", 10);
 const isProduction = process.env.NODE_ENV === "production";
