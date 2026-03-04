@@ -5,6 +5,7 @@
   "description": "Exemplo DDD + Microserviços + Hexagonal (TypeScript, PostgreSQL, Redis, RabbitMQ)",
   "scripts": {
     "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
     "dev:identity": "pnpm --filter identity-service run dev",
     "dev:catalog": "pnpm --filter catalog-service run dev",
     "dev": "pnpm run dev:identity & pnpm run dev:catalog",

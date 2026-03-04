@@ -34,6 +34,8 @@ Cada microserviço segue **hexagonal + DDD** com estrutura e convenções fixas 
 
 → **Guia completo:** [docs/STRUCTURE.md](docs/STRUCTURE.md) — mapa da árvore, convenções de nomeação, checklist para novo recurso e novo serviço (estilo Laravel: estrutura que ajuda e não atrapalha).
 
+→ **Troubleshooting:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — formato de erro da API, códigos HTTP e dicas para debugar 401, 409, 500.
+
 ## Como rodar
 
 ### 1. Dependências e variáveis
@@ -72,6 +74,14 @@ pnpm dev:catalog    # http://localhost:3002
 ```
 
 Com o gateway no ar, você pode chamar tudo por **http://localhost:8080** (veja [API Gateway](#api-gateway)).
+
+### 5. Testes
+
+```bash
+pnpm test
+```
+
+Roda os testes (Vitest) em todos os pacotes. Nos serviços há testes unitários de use cases e de validação Zod (ex.: `create-item.dto.spec.ts`). Testes de integração HTTP (ex.: GET /api/items retorna 200) estão previstos como próximo passo.
 
 ## API Gateway
 

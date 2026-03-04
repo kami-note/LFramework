@@ -5,7 +5,7 @@ import type { LoginUseCase } from "../../application/use-cases/login.use-case";
 import type { GetCurrentUserUseCase } from "../../application/use-cases/get-current-user.use-case";
 import type { OAuthCallbackUseCase } from "../../application/use-cases/oauth-callback.use-case";
 import type { IOAuthProvider } from "../../application/ports/oauth-provider.port";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "../../application/ports/cache.port";
 import type { RegisterDto } from "../../application/dtos/register.dto";
 import type { LoginDto } from "../../application/dtos/login.dto";
 import type { AuthResponseDto } from "../../application/dtos/auth-response.dto";

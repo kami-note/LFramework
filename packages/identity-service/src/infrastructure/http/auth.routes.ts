@@ -34,7 +34,7 @@ export function createAuthRoutes(
 
   router.post("/auth/register", authRateLimiter, validateRegister, controller.register);
   router.post("/auth/login", authRateLimiter, validateLogin, controller.login);
-  router.get("/auth/me", authMiddleware, controller.me);
+  router.get("/auth/me", authMiddleware, controller.me as (req: Request, res: Response) => Promise<void>);
 
   router.get("/auth/google", oauthRateLimiter, controller.googleRedirect);
   router.get("/auth/google/callback", oauthRateLimiter, controller.googleCallback);

@@ -8,7 +8,7 @@ export function createUserRoutes(
   authMiddleware: (req: Request, res: Response, next: NextFunction) => void
 ): Router {
   const router = Router();
-  router.post("/users", validateCreateUser, authMiddleware, requireRole("admin"), controller.create);
-  router.get("/users/:id", authMiddleware, controller.getById);
+  router.post("/users", validateCreateUser, authMiddleware, requireRole("admin"), controller.create as (req: Request, res: Response) => Promise<void>);
+  router.get("/users/:id", authMiddleware, controller.getById as (req: Request, res: Response) => Promise<void>);
   return router;
 }

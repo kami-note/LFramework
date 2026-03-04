@@ -1,6 +1,8 @@
 import express from "express";
 import { createContainer } from "./container";
 import type { HealthResponseDto } from "./infrastructure/http/dtos/health-response.dto";
+import { requestIdMiddleware } from "./infrastructure/request-id.middleware";
+import { errorHandlerMiddleware } from "./infrastructure/error-handler.middleware";
 
 const port = parseInt(process.env.CATALOG_SERVICE_PORT ?? "3002", 10);
 const isProduction = process.env.NODE_ENV === "production";
@@ -38,20 +40,21 @@ async function bootstrap() {
     jwtSecret,
   });
 
-  await container.connectRabbitMQ(async (payload) => {
-    // P1.5: não logar PII (email); apenas identificador opaco.
-    console.log("[Catalog] UserCreated received:", payload.userId);
-    // Ponto de extensão: criar dados locais, invalidar cache, etc.
-  });
+  await container.connectRabbitMQ((payload) =>
+    container.handleUserCreatedUseCase.execute(payload)
+  );
 
   const app = express();
-  app.use(express.json());
+  app.use(requestIdMiddleware);
+  app.use(express.json({ limit: "512kb" }));
   app.use("/api", container.itemRoutes);
 
   app.get("/health", (_req, res) => {
     const body: HealthResponseDto = { status: "ok", service: "catalog-service" };
     res.json(body);
   });
+
+  app.use(errorHandlerMiddleware);
 
   app.listen(port, () => {
     console.log(`Catalog service listening on http://localhost:${port}`);

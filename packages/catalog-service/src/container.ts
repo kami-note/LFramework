@@ -6,6 +6,7 @@ import { PrismaItemRepository } from "./infrastructure/persistence/prisma-item.r
 import { RabbitMqUserEventsAdapter } from "./infrastructure/messaging/rabbitmq-user-events.adapter";
 import { CreateItemUseCase } from "./application/use-cases/create-item.use-case";
 import { ListItemsUseCase } from "./application/use-cases/list-items.use-case";
+import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
 import { ItemController } from "./infrastructure/http/item.controller";
 import { createItemRoutes } from "./infrastructure/http/routes";
 import { createCatalogAuthMiddleware } from "./infrastructure/http/auth.middleware";
@@ -26,6 +27,7 @@ export function createContainer(config: {
 
   const createItemUseCase = new CreateItemUseCase(itemRepository, cache);
   const listItemsUseCase = new ListItemsUseCase(itemRepository, cache);
+  const handleUserCreatedUseCase = new HandleUserCreatedUseCase(cache);
 
   const itemController = new ItemController(createItemUseCase, listItemsUseCase);
   const authMiddleware = createCatalogAuthMiddleware(config.jwtSecret);
@@ -37,6 +39,7 @@ export function createContainer(config: {
     prisma,
     redis,
     itemRoutes,
+    handleUserCreatedUseCase,
     async connectRabbitMQ(userCreatedHandler: (payload: UserCreatedPayload) => Promise<void>): Promise<void> {
       eventConsumer.onUserCreated(userCreatedHandler);
       await eventConsumer.start();

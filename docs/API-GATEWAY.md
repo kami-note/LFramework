@@ -51,6 +51,8 @@ Todas as URLs são relativas à base do gateway: `http://localhost:8080` (ou o v
 
 O Nginx remove o prefixo (`/identity/` ou `/catalog/`) ao repassar para o serviço. Por exemplo: `GET /identity/api/users/123` → `GET /api/users/123` no identity-service.
 
+**Documentação OpenAPI:** [docs/openapi.yaml](../openapi.yaml) — spec dos endpoints de Identity e Catalog (request/response, erros, segurança Bearer JWT).
+
 ---
 
 ## Como rodar

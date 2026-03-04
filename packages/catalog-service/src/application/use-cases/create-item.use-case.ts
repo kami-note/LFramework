@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { Item } from "../../domain/entities/item.entity";
 import { Money } from "../../domain/value-objects/money.vo";
 import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "../ports/cache.port";
 import type { CreateItemDto } from "../dtos/create-item.dto";
 import type { ItemResponseDto } from "../dtos/item-response.dto";
 import { InvalidItemError } from "../errors";

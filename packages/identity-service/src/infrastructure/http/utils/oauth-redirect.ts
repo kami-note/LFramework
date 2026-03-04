@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { randomBytes } from "crypto";
 import type { IOAuthProvider } from "../../../application/ports/oauth-provider.port";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "../../../application/ports/cache.port";
 
 const OAUTH_STATE_TTL_SECONDS = 600; // 10 min
 export const OAUTH_STATE_PREFIX = "oauth_state:";

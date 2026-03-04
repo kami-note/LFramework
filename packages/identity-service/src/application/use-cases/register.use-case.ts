@@ -6,7 +6,7 @@ import type { IUserRegistrationPersistence } from "../../domain/repository-inter
 import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { IEventPublisher } from "../ports/event-publisher.port";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "../ports/cache.port";
 import { publishUserCreatedAndCache } from "../services/user-created-notify";
 import type { RegisterDto } from "../dtos/register.dto";
 import type { AuthUserDto } from "../dtos/auth-response.dto";

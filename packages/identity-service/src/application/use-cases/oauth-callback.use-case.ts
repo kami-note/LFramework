@@ -6,7 +6,7 @@ import type { IOAuthAccountRepository } from "../../domain/repository-interfaces
 import type { IUserOAuthRegistrationPersistence } from "../../domain/repository-interfaces/user-oauth-registration-persistence.interface";
 import type { IOAuthProvider } from "../ports/oauth-provider.port";
 import type { ITokenService } from "../ports/token-service.port";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "../ports/cache.port";
 import type { IEventPublisher } from "../ports/event-publisher.port";
 import { publishUserCreatedAndCache } from "../services/user-created-notify";
 import type { OAuthCallbackResponseDto } from "../dtos/oauth-callback-response.dto";

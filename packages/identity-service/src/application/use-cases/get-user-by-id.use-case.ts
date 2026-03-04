@@ -1,5 +1,5 @@
 import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "../ports/cache.port";
 import type { UserResponseDto } from "../dtos/user-response.dto";
 
 export class GetUserByIdUseCase {

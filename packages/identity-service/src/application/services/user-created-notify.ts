@@ -1,4 +1,4 @@
-import type { ICacheService } from "@lframework/shared";
+import type { ICacheService } from "../ports/cache.port";
 import type { IEventPublisher } from "../ports/event-publisher.port";
 import { USER_CREATED_EVENT } from "@lframework/shared";
 

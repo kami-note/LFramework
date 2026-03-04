@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { emailSchema } from "./auth-common.schema";
+import { emailSchema, nameSchema } from "./auth-common.schema";
 
 /**
  * Schema de validação para criação de usuário (admin).
@@ -7,7 +7,7 @@ import { emailSchema } from "./auth-common.schema";
  */
 export const createUserSchema = z.object({
   email: emailSchema,
-  name: z.string().min(1, "name is required").trim(),
+  name: nameSchema,
 });
 
 export type CreateUserDto = z.infer<typeof createUserSchema>;

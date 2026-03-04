@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { emailSchema, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth-common.schema";
+import { emailSchema, nameSchema, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth-common.schema";
 
 /**
  * Schema de validação para registro de usuário.
@@ -7,7 +7,7 @@ import { emailSchema, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth-co
  */
 export const registerSchema = z.object({
   email: emailSchema,
-  name: z.string().min(1, "name is required").trim(),
+  name: nameSchema,
   password: z
     .string()
     .min(MIN_PASSWORD_LENGTH, "Password must be at least 8 characters")
