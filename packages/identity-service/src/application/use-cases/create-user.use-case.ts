@@ -2,18 +2,15 @@ import { randomUUID } from "crypto";
 import { User } from "../../domain/entities/user.entity";
 import { Email } from "../../domain/value-objects/email.vo";
 import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
-import type { ICacheService } from "../ports/cache.port";
-import type { IEventPublisher } from "../ports/event-publisher.port";
+import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";
 import type { CreateUserDto } from "../dtos/create-user.dto";
 import type { UserResponseDto } from "../dtos/user-response.dto";
-import { publishUserCreatedAndCache } from "../services/user-created-notify";
 import { UserAlreadyExistsError, InvalidEmailError } from "../errors";
 
 export class CreateUserUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
-    private readonly cache: ICacheService,
-    private readonly eventPublisher: IEventPublisher
+    private readonly userCreatedNotifier: IUserCreatedNotifier
   ) {}
 
   async execute(dto: CreateUserDto): Promise<UserResponseDto> {
@@ -32,16 +29,12 @@ export class CreateUserUseCase {
     const user = User.create(id, email, dto.name);
     await this.userRepository.save(user);
 
-    await publishUserCreatedAndCache(
-      {
-        id: user.id,
-        email: user.email.value,
-        name: user.name,
-        createdAt: user.createdAt.toISOString(),
-      },
-      this.eventPublisher,
-      this.cache
-    );
+    await this.userCreatedNotifier.notify({
+      id: user.id,
+      email: user.email.value,
+      name: user.name,
+      createdAt: user.createdAt.toISOString(),
+    });
 
     const result: UserResponseDto = {
       id: user.id,

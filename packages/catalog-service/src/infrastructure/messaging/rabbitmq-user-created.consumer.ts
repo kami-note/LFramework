@@ -6,6 +6,7 @@ import {
   EXCHANGE_USER_EVENTS,
   QUEUE_USER_CREATED_CATALOG,
   nameSchema,
+  logger,
 } from "@lframework/shared";
 
 /** Não confiamos no publisher: validamos payload com as mesmas regras de nome/email e occurredAt. */
@@ -71,7 +72,7 @@ export class RabbitMqUserCreatedConsumer {
         }
         const parsed = userCreatedPayloadSchema.safeParse(body.payload);
         if (!parsed.success) {
-          console.error("Invalid UserCreated payload:", parsed.error.flatten());
+          logger.warn({ validation: parsed.error.flatten() }, "Invalid UserCreated payload");
           this.channel.nack(msg, false, false);
           return;
         }
@@ -79,7 +80,7 @@ export class RabbitMqUserCreatedConsumer {
         await this.handler(payload);
         this.channel.ack(msg);
       } catch (err) {
-        console.error("Error processing UserCreated:", err);
+        logger.error({ err }, "Error processing UserCreated");
         this.channel.nack(msg, false, true);
       }
     });

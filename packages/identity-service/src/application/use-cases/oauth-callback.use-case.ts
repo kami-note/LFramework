@@ -6,9 +6,7 @@ import type { IOAuthAccountRepository } from "../../domain/repository-interfaces
 import type { IUserOAuthRegistrationPersistence } from "../../domain/repository-interfaces/user-oauth-registration-persistence.interface";
 import type { IOAuthProvider } from "../ports/oauth-provider.port";
 import type { ITokenService } from "../ports/token-service.port";
-import type { ICacheService } from "../ports/cache.port";
-import type { IEventPublisher } from "../ports/event-publisher.port";
-import { publishUserCreatedAndCache } from "../services/user-created-notify";
+import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";
 import type { OAuthCallbackResponseDto } from "../dtos/oauth-callback-response.dto";
 
 export type OAuthCallbackResultDto = Omit<OAuthCallbackResponseDto, "expiresIn">;
@@ -19,8 +17,7 @@ export class OAuthCallbackUseCase {
     private readonly oauthAccountRepository: IOAuthAccountRepository,
     private readonly userOAuthRegistrationPersistence: IUserOAuthRegistrationPersistence,
     private readonly tokenService: ITokenService,
-    private readonly cache: ICacheService,
-    private readonly eventPublisher: IEventPublisher
+    private readonly userCreatedNotifier: IUserCreatedNotifier
   ) {}
 
   async execute(
@@ -72,16 +69,12 @@ export class OAuthCallbackUseCase {
         userInfo.providerId
       );
 
-      await publishUserCreatedAndCache(
-        {
-          id: user.id,
-          email: user.email.value,
-          name: user.name,
-          createdAt: user.createdAt.toISOString(),
-        },
-        this.eventPublisher,
-        this.cache
-      );
+      await this.userCreatedNotifier.notify({
+        id: user.id,
+        email: user.email.value,
+        name: user.name,
+        createdAt: user.createdAt.toISOString(),
+      });
     } else {
       await this.oauthAccountRepository.save(user.id, provider.provider, userInfo.providerId);
     }

@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CreateItemUseCase } from "./create-item.use-case";
 import { InvalidItemError } from "../errors";
 import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
-import type { ICacheService } from "../ports/cache.port";
+import type { IItemsListCacheInvalidator } from "../ports/items-list-cache-invalidator.port";
 
 describe("CreateItemUseCase", () => {
   let itemRepository: IItemRepository;
-  let cache: ICacheService;
+  let itemsListCacheInvalidator: IItemsListCacheInvalidator;
 
   beforeEach(() => {
     itemRepository = {
@@ -14,15 +14,13 @@ describe("CreateItemUseCase", () => {
       findById: vi.fn(),
       findAll: vi.fn(),
     };
-    cache = {
-      get: vi.fn(),
-      set: vi.fn().mockResolvedValue(undefined),
-      delete: vi.fn().mockResolvedValue(undefined),
+    itemsListCacheInvalidator = {
+      invalidate: vi.fn().mockResolvedValue(undefined),
     };
   });
 
   it("deve criar item com sucesso e retornar ItemResponseDto", async () => {
-    const useCase = new CreateItemUseCase(itemRepository, cache);
+    const useCase = new CreateItemUseCase(itemRepository, itemsListCacheInvalidator);
     const dto = { name: "Produto X", priceAmount: 9999, priceCurrency: "BRL" };
 
     const result = await useCase.execute(dto);
@@ -35,11 +33,11 @@ describe("CreateItemUseCase", () => {
     expect(result.id).toBeDefined();
     expect(result.createdAt).toBeDefined();
     expect(itemRepository.save).toHaveBeenCalled();
-    expect(cache.delete).toHaveBeenCalledWith("items:list");
+    expect(itemsListCacheInvalidator.invalidate).toHaveBeenCalled();
   });
 
   it("deve lançar InvalidItemError quando priceAmount for inválido", async () => {
-    const useCase = new CreateItemUseCase(itemRepository, cache);
+    const useCase = new CreateItemUseCase(itemRepository, itemsListCacheInvalidator);
     const dto = { name: "Item", priceAmount: -100, priceCurrency: "BRL" };
 
     await expect(useCase.execute(dto)).rejects.toThrow(InvalidItemError);

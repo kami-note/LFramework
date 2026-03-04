@@ -6,16 +6,14 @@ import type { IOAuthAccountRepository } from "../../domain/repository-interfaces
 import type { IUserOAuthRegistrationPersistence } from "../../domain/repository-interfaces/user-oauth-registration-persistence.interface";
 import type { IOAuthProvider } from "../ports/oauth-provider.port";
 import type { ITokenService } from "../ports/token-service.port";
-import type { ICacheService } from "../ports/cache.port";
-import type { IEventPublisher } from "../ports/event-publisher.port";
+import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";
 
 describe("OAuthCallbackUseCase", () => {
   let userRepository: IUserRepository;
   let oauthAccountRepository: IOAuthAccountRepository;
   let userOAuthRegistrationPersistence: IUserOAuthRegistrationPersistence;
   let tokenService: ITokenService;
-  let cache: ICacheService;
-  let eventPublisher: IEventPublisher;
+  let userCreatedNotifier: IUserCreatedNotifier;
   let provider: IOAuthProvider;
 
   beforeEach(() => {
@@ -35,13 +33,8 @@ describe("OAuthCallbackUseCase", () => {
       sign: vi.fn().mockReturnValue("jwt-token"),
       verify: vi.fn(),
     };
-    cache = {
-      get: vi.fn(),
-      set: vi.fn().mockResolvedValue(undefined),
-      delete: vi.fn(),
-    };
-    eventPublisher = {
-      publish: vi.fn().mockResolvedValue(undefined),
+    userCreatedNotifier = {
+      notify: vi.fn().mockResolvedValue(undefined),
     };
     provider = {
       provider: "google",
@@ -73,8 +66,7 @@ describe("OAuthCallbackUseCase", () => {
       oauthAccountRepository,
       userOAuthRegistrationPersistence,
       tokenService,
-      cache,
-      eventPublisher
+      userCreatedNotifier
     );
     const result = await useCase.execute("code", "http://localhost/callback", provider);
 
@@ -88,7 +80,7 @@ describe("OAuthCallbackUseCase", () => {
       role: "user",
     });
     expect(userOAuthRegistrationPersistence.saveUserAndOAuthAccount).not.toHaveBeenCalled();
-    expect(eventPublisher.publish).not.toHaveBeenCalled();
+    expect(userCreatedNotifier.notify).not.toHaveBeenCalled();
   });
 
   it("deve criar usuário, publicar evento e retornar isNewUser true quando não existe link nem usuário", async () => {
@@ -105,8 +97,7 @@ describe("OAuthCallbackUseCase", () => {
       oauthAccountRepository,
       userOAuthRegistrationPersistence,
       tokenService,
-      cache,
-      eventPublisher
+      userCreatedNotifier
     );
     const result = await useCase.execute("code", "http://localhost/callback", provider);
 
@@ -116,8 +107,7 @@ describe("OAuthCallbackUseCase", () => {
     expect(result.user.id).toBeDefined();
     expect(result.accessToken).toBe("jwt-token");
     expect(userOAuthRegistrationPersistence.saveUserAndOAuthAccount).toHaveBeenCalledTimes(1);
-    expect(eventPublisher.publish).toHaveBeenCalledTimes(1);
-    expect(cache.set).toHaveBeenCalled();
+    expect(userCreatedNotifier.notify).toHaveBeenCalledTimes(1);
   });
 
   it("deve lançar quando getUserInfoFromCode retorna null", async () => {
@@ -128,8 +118,7 @@ describe("OAuthCallbackUseCase", () => {
       oauthAccountRepository,
       userOAuthRegistrationPersistence,
       tokenService,
-      cache,
-      eventPublisher
+      userCreatedNotifier
     );
 
     await expect(

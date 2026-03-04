@@ -76,3 +76,4 @@ Cada microserviço em `packages/<nome>-service/` segue a mesma divisão:
 - **Framework = convenções + shared.** O shared é o núcleo (erro, HTTP, schemas, eventos); os serviços seguem a mesma estrutura e importam do shared onde fizer sentido.
 - **Um serviço = uma árvore fixa.** Ver [STRUCTURE.md](STRUCTURE.md) para mapa de pastas e checklists.
 - **Novo serviço = copiar árvore e renomear.** Mesma estrutura, mesmo padrão de container e rotas; eventos e contratos no shared.
+- **Padrões replicáveis.** Ver [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) para Porta+Adapter (DIP) e Error-to-HTTP mapper (SRP/DRY); aplicáveis em qualquer novo use case ou microserviço.

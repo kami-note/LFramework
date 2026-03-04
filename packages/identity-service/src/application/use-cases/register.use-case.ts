@@ -5,9 +5,7 @@ import type { IUserRepository } from "../../domain/repository-interfaces/user-re
 import type { IUserRegistrationPersistence } from "../../domain/repository-interfaces/user-registration-persistence.interface";
 import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
-import type { IEventPublisher } from "../ports/event-publisher.port";
-import type { ICacheService } from "../ports/cache.port";
-import { publishUserCreatedAndCache } from "../services/user-created-notify";
+import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";
 import type { RegisterDto } from "../dtos/register.dto";
 import type { AuthUserDto } from "../dtos/auth-response.dto";
 import {
@@ -26,8 +24,7 @@ export class RegisterUseCase {
     private readonly registrationPersistence: IUserRegistrationPersistence,
     private readonly passwordHasher: IPasswordHasher,
     private readonly tokenService: ITokenService,
-    private readonly cache: ICacheService,
-    private readonly eventPublisher: IEventPublisher
+    private readonly userCreatedNotifier: IUserCreatedNotifier
   ) {}
 
   async execute(dto: RegisterDto): Promise<RegisterResultDto> {
@@ -48,16 +45,12 @@ export class RegisterUseCase {
 
     await this.registrationPersistence.saveUserAndCredential(user, passwordHash);
 
-    await publishUserCreatedAndCache(
-      {
-        id: user.id,
-        email: user.email.value,
-        name: user.name,
-        createdAt: user.createdAt.toISOString(),
-      },
-      this.eventPublisher,
-      this.cache
-    );
+    await this.userCreatedNotifier.notify({
+      id: user.id,
+      email: user.email.value,
+      name: user.name,
+      createdAt: user.createdAt.toISOString(),
+    });
 
     const accessToken = this.tokenService.sign({
       sub: user.id,

@@ -1,4 +1,5 @@
 import type { UserCreatedPayload } from "@lframework/shared";
+import { logger } from "@lframework/shared";
 import type { ICacheService } from "../ports/cache.port";
 
 /**
@@ -15,7 +16,7 @@ export class HandleUserCreatedUseCase {
 
   async execute(payload: UserCreatedPayload): Promise<void> {
     // P1.5: não logar PII (email); apenas identificador opaco.
-    console.log("[Catalog] UserCreated received:", payload.userId);
+    logger.info({ userId: payload.userId }, "UserCreated received");
 
     const key = `user:${payload.userId}`;
     await this.cache.delete(key);

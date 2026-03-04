@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { CreateItemUseCase } from "../../application/use-cases/create-item.use-case";
 import { ListItemsUseCase } from "../../application/use-cases/list-items.use-case";
-import { InvalidItemError } from "../../application/errors";
+import { mapApplicationErrorToHttp } from "../../application/http/error-to-http.mapper";
 import type { CreateItemDto } from "../../application/dtos/create-item.dto";
 import type { AuthenticatedRequest } from "@lframework/shared";
 import { sendError } from "@lframework/shared";
@@ -18,11 +18,8 @@ export class ItemController {
       const result = await this.createItemUseCase.execute(dto);
       res.status(201).json(result);
     } catch (err) {
-      if (err instanceof InvalidItemError) {
-        sendError(res, 400, err.message);
-        return;
-      }
-      sendError(res, 500, "Internal server error");
+      const { statusCode, message } = mapApplicationErrorToHttp(err);
+      sendError(res, statusCode, message);
     }
   };
 
@@ -30,8 +27,9 @@ export class ItemController {
     try {
       const items = await this.listItemsUseCase.execute();
       res.json(items);
-    } catch {
-      sendError(res, 500, "Internal server error");
+    } catch (err) {
+      const { statusCode, message } = mapApplicationErrorToHttp(err);
+      sendError(res, statusCode, message);
     }
   };
 }

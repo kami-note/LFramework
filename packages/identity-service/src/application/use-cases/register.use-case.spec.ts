@@ -6,16 +6,14 @@ import type { IUserRepository } from "../../domain/repository-interfaces/user-re
 import type { IUserRegistrationPersistence } from "../../domain/repository-interfaces/user-registration-persistence.interface";
 import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
-import type { IEventPublisher } from "../ports/event-publisher.port";
-import type { ICacheService } from "../ports/cache.port";
+import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";
 
 describe("RegisterUseCase", () => {
   let userRepository: IUserRepository;
   let registrationPersistence: IUserRegistrationPersistence;
   let passwordHasher: IPasswordHasher;
   let tokenService: ITokenService;
-  let cache: ICacheService;
-  let eventPublisher: IEventPublisher;
+  let userCreatedNotifier: IUserCreatedNotifier;
 
   beforeEach(() => {
     userRepository = {
@@ -34,13 +32,8 @@ describe("RegisterUseCase", () => {
       sign: vi.fn().mockReturnValue("fake-jwt"),
       verify: vi.fn(),
     };
-    cache = {
-      get: vi.fn(),
-      set: vi.fn().mockResolvedValue(undefined),
-      delete: vi.fn(),
-    };
-    eventPublisher = {
-      publish: vi.fn().mockResolvedValue(undefined),
+    userCreatedNotifier = {
+      notify: vi.fn().mockResolvedValue(undefined),
     };
   });
 
@@ -50,8 +43,7 @@ describe("RegisterUseCase", () => {
       registrationPersistence,
       passwordHasher,
       tokenService,
-      cache,
-      eventPublisher
+      userCreatedNotifier
     );
     const dto = {
       email: "novo@example.com",
@@ -69,8 +61,7 @@ describe("RegisterUseCase", () => {
     expect(result.user.createdAt).toBeDefined();
     expect(result.accessToken).toBe("fake-jwt");
     expect(registrationPersistence.saveUserAndCredential).toHaveBeenCalled();
-    expect(eventPublisher.publish).toHaveBeenCalled();
-    expect(cache.set).toHaveBeenCalled();
+    expect(userCreatedNotifier.notify).toHaveBeenCalled();
   });
 
   it("deve lançar UserAlreadyExistsError quando o email já existe", async () => {
@@ -88,8 +79,7 @@ describe("RegisterUseCase", () => {
       registrationPersistence,
       passwordHasher,
       tokenService,
-      cache,
-      eventPublisher
+      userCreatedNotifier
     );
 
     await expect(
@@ -115,8 +105,7 @@ describe("RegisterUseCase", () => {
       registrationPersistence,
       passwordHasher,
       tokenService,
-      cache,
-      eventPublisher
+      userCreatedNotifier
     );
 
     await expect(

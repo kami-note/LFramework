@@ -3,6 +3,7 @@ import Redis from "ioredis";
 import type { UserCreatedPayload } from "@lframework/shared";
 import { RedisCacheAdapter } from "@lframework/shared";
 import { PrismaItemRepository } from "./infrastructure/persistence/prisma-item.repository";
+import { ItemsListCacheInvalidatorAdapter } from "./infrastructure/cache/items-list-cache-invalidator.adapter";
 import { RabbitMqUserEventsAdapter } from "./infrastructure/messaging/rabbitmq-user-events.adapter";
 import { CreateItemUseCase } from "./application/use-cases/create-item.use-case";
 import { ListItemsUseCase } from "./application/use-cases/list-items.use-case";
@@ -25,8 +26,9 @@ export function createContainer(config: {
 
   const itemRepository = new PrismaItemRepository(prisma);
   const cache = new RedisCacheAdapter(redis);
+  const itemsListCacheInvalidator = new ItemsListCacheInvalidatorAdapter(cache);
 
-  const createItemUseCase = new CreateItemUseCase(itemRepository, cache);
+  const createItemUseCase = new CreateItemUseCase(itemRepository, itemsListCacheInvalidator);
   const listItemsUseCase = new ListItemsUseCase(itemRepository, cache);
   const handleUserCreatedUseCase = new HandleUserCreatedUseCase(cache);
 

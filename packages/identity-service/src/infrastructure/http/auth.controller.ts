@@ -16,13 +16,8 @@ import {
 } from "../../application/dtos/oauth-callback-query.dto";
 import { formatExpiresIn } from "./utils/format-expires-in";
 import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
-import { sendError } from "@lframework/shared";
-import {
-  UserAlreadyExistsError,
-  InvalidCredentialsError,
-  InvalidEmailError,
-  PasswordValidationError,
-} from "../../application/errors";
+import { sendError, logger } from "@lframework/shared";
+import { mapApplicationErrorToHttp } from "../../application/http/error-to-http.mapper";
 
 export class AuthController {
   constructor(
@@ -48,15 +43,8 @@ export class AuthController {
       };
       res.status(201).json(body);
     } catch (err) {
-      if (err instanceof UserAlreadyExistsError) {
-        sendError(res, 409, err.message);
-        return;
-      }
-      if (err instanceof InvalidEmailError || err instanceof PasswordValidationError) {
-        sendError(res, 400, err.message);
-        return;
-      }
-      sendError(res, 500, "Internal server error");
+      const { statusCode, message } = mapApplicationErrorToHttp(err);
+      sendError(res, statusCode, message);
     }
   };
 
@@ -71,11 +59,8 @@ export class AuthController {
       };
       res.json(body);
     } catch (err) {
-      if (err instanceof InvalidCredentialsError) {
-        sendError(res, 401, err.message);
-        return;
-      }
-      sendError(res, 500, "Internal server error");
+      const { statusCode, message } = mapApplicationErrorToHttp(err);
+      sendError(res, statusCode, message);
     }
   };
 
@@ -154,8 +139,7 @@ export class AuthController {
       res.json(body);
     } catch (err) {
       const safeMessage = err instanceof Error ? err.message : "Unknown error";
-      const safeName = err instanceof Error ? err.name : "Error";
-      console.error("OAuth callback (" + providerName + ") failed:", safeName, safeMessage);
+      logger.error({ err, providerName }, "OAuth callback failed");
       sendError(res, 400, "OAuth failed");
     }
   };

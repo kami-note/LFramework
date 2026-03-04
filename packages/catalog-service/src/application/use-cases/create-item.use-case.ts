@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { Item } from "../../domain/entities/item.entity";
 import { Money } from "../../domain/value-objects/money.vo";
 import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
-import type { ICacheService } from "../ports/cache.port";
+import type { IItemsListCacheInvalidator } from "../ports/items-list-cache-invalidator.port";
 import type { CreateItemDto } from "../dtos/create-item.dto";
 import type { ItemResponseDto } from "../dtos/item-response.dto";
 import { InvalidItemError } from "../errors";
@@ -10,7 +10,7 @@ import { InvalidItemError } from "../errors";
 export class CreateItemUseCase {
   constructor(
     private readonly itemRepository: IItemRepository,
-    private readonly cache: ICacheService
+    private readonly itemsListCacheInvalidator: IItemsListCacheInvalidator
   ) {}
 
   async execute(dto: CreateItemDto): Promise<ItemResponseDto> {
@@ -20,7 +20,7 @@ export class CreateItemUseCase {
       const item = Item.create(id, dto.name, price);
       await this.itemRepository.save(item);
 
-      await this.cache.delete("items:list");
+      await this.itemsListCacheInvalidator.invalidate();
 
       const result: ItemResponseDto = {
         id: item.id,

@@ -7,6 +7,7 @@ import { PrismaUserRegistrationPersistence } from "./infrastructure/persistence/
 import { PrismaUserOAuthRegistrationPersistence } from "./infrastructure/persistence/prisma-user-oauth-registration.repository";
 import { PrismaOAuthAccountRepository } from "./infrastructure/persistence/prisma-oauth-account.repository";
 import { RabbitMqEventPublisherAdapter } from "./infrastructure/messaging/rabbitmq-event-publisher.adapter";
+import { UserCreatedNotifierAdapter } from "./infrastructure/notifiers/user-created-notifier.adapter";
 import { JwtTokenService } from "./infrastructure/auth/jwt-token.service";
 import { Argon2PasswordHasher } from "./infrastructure/auth/argon2-password-hasher";
 import { GoogleOAuthProvider } from "./infrastructure/auth/google-oauth.provider";
@@ -63,15 +64,15 @@ export function createContainer(config: ContainerConfig) {
     ? new GitHubOAuthProvider(config.githubOAuth)
     : null;
 
-  const createUserUseCase = new CreateUserUseCase(userRepository, cache, eventPublisher);
+  const userCreatedNotifier = new UserCreatedNotifierAdapter(eventPublisher, cache);
+  const createUserUseCase = new CreateUserUseCase(userRepository, userCreatedNotifier);
   const getUserByIdUseCase = new GetUserByIdUseCase(userRepository, cache);
   const registerUseCase = new RegisterUseCase(
     userRepository,
     registrationPersistence,
     passwordHasher,
     tokenService,
-    cache,
-    eventPublisher
+    userCreatedNotifier
   );
   const loginUseCase = new LoginUseCase(
     userRepository,
@@ -85,8 +86,7 @@ export function createContainer(config: ContainerConfig) {
     oauthAccountRepository,
     userOAuthRegistrationPersistence,
     tokenService,
-    cache,
-    eventPublisher
+    userCreatedNotifier
   );
 
   const userController = new UserController(createUserUseCase, getUserByIdUseCase);

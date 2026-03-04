@@ -2,10 +2,7 @@ import { Response } from "express";
 import { z } from "zod";
 import { CreateUserUseCase } from "../../application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "../../application/use-cases/get-user-by-id.use-case";
-import {
-  UserAlreadyExistsError,
-  InvalidEmailError,
-} from "../../application/errors";
+import { mapApplicationErrorToHttp } from "../../application/http/error-to-http.mapper";
 import type { CreateUserDto } from "../../application/dtos/create-user.dto";
 import type { AuthenticatedRequest } from "@lframework/shared";
 import { sendError } from "@lframework/shared";
@@ -28,16 +25,8 @@ export class UserController {
       const result = await this.createUserUseCase.execute(dto);
       res.status(201).json(result);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Internal server error";
-      if (err instanceof UserAlreadyExistsError) {
-        sendError(res, 409, message);
-        return;
-      }
-      if (err instanceof InvalidEmailError) {
-        sendError(res, 400, message);
-        return;
-      }
-      sendError(res, 500, "Internal server error");
+      const { statusCode, message } = mapApplicationErrorToHttp(err);
+      sendError(res, statusCode, message);
     }
   };
 
