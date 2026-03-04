@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { sendError } from "./utils/send-error";
 
 declare global {
   namespace Express {
@@ -10,6 +11,12 @@ declare global {
 }
 
 /**
+ * Request após auth middleware no catalog: userId garantido.
+ * Use em controllers de rotas protegidas por createCatalogAuthMiddleware.
+ */
+export type AuthenticatedRequest = Request & { userId: string };
+
+/**
  * Middleware: valida Bearer JWT (mesmo contrato/secret do identity-service) e anexa userId em req.
  * Usado para proteger rotas que exigem autenticação (ex.: POST /api/items).
  */
@@ -17,7 +24,7 @@ export function createCatalogAuthMiddleware(secret: string) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      res.status(401).json({ error: "Missing or invalid Authorization header" });
+      sendError(res, 401, "Missing or invalid Authorization header");
       return;
     }
     const token = authHeader.slice(7);
@@ -28,7 +35,7 @@ export function createCatalogAuthMiddleware(secret: string) {
       }
       next();
     } catch {
-      res.status(401).json({ error: "Invalid or expired token" });
+      sendError(res, 401, "Invalid or expired token");
     }
   };
 }

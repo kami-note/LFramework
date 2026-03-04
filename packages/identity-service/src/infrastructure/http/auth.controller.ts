@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import type { AuthenticatedRequest } from "./auth.middleware";
 import type { RegisterUseCase } from "../../application/use-cases/register.use-case";
 import type { LoginUseCase } from "../../application/use-cases/login.use-case";
 import type { GetCurrentUserUseCase } from "../../application/use-cases/get-current-user.use-case";
@@ -9,24 +10,19 @@ import type { RegisterDto } from "../../application/dtos/register.dto";
 import type { LoginDto } from "../../application/dtos/login.dto";
 import type { AuthResponseDto } from "../../application/dtos/auth-response.dto";
 import type { OAuthCallbackResponseDto } from "../../application/dtos/oauth-callback-response.dto";
-import type { ErrorResponseDto } from "../../application/dtos/error-response.dto";
 import {
   oauthCallbackQuerySchema,
   type OAuthCallbackQueryDto,
 } from "../../application/dtos/oauth-callback-query.dto";
 import { formatExpiresIn } from "./utils/format-expires-in";
 import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
+import { sendError } from "./utils/send-error";
 import {
   UserAlreadyExistsError,
   InvalidCredentialsError,
   InvalidEmailError,
   PasswordValidationError,
 } from "../../application/errors";
-
-function sendError(res: Response, status: number, message: string): void {
-  const body: ErrorResponseDto = { error: message };
-  res.status(status).json(body);
-}
 
 export class AuthController {
   constructor(
@@ -83,14 +79,9 @@ export class AuthController {
     }
   };
 
-  me = async (req: Request, res: Response): Promise<void> => {
+  me = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const userId = req.userId;
-      if (!userId) {
-        sendError(res, 401, "Unauthorized");
-        return;
-      }
-      const user = await this.getCurrentUserUseCase.execute(userId);
+      const user = await this.getCurrentUserUseCase.execute(req.userId);
       if (!user) {
         sendError(res, 404, "User not found");
         return;

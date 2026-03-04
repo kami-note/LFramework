@@ -1,6 +1,6 @@
 import type { Response } from "express";
 import type { z } from "zod";
-import type { ErrorResponseDto } from "../../../application/dtos/error-response.dto";
+import type { ErrorResponseDto } from "@lframework/shared";
 
 /**
  * Envia resposta 400 com mensagens de erro do Zod formatadas.

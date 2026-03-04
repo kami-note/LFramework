@@ -7,7 +7,7 @@ import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { IEventPublisher } from "../ports/event-publisher.port";
 import type { ICacheService } from "@lframework/shared";
-import { USER_CREATED_EVENT } from "@lframework/shared";
+import { publishUserCreatedAndCache } from "../services/user-created-notify";
 import type { RegisterDto } from "../dtos/register.dto";
 import type { AuthUserDto } from "../dtos/auth-response.dto";
 import {
@@ -48,23 +48,15 @@ export class RegisterUseCase {
 
     await this.registrationPersistence.saveUserAndCredential(user, passwordHash);
 
-    await this.eventPublisher.publish(USER_CREATED_EVENT, {
-      userId: user.id,
-      email: user.email.value,
-      name: user.name,
-      occurredAt: user.createdAt.toISOString(),
-    });
-
-    const cacheKey = `user:${user.id}`;
-    await this.cache.set(
-      cacheKey,
+    await publishUserCreatedAndCache(
       {
         id: user.id,
         email: user.email.value,
         name: user.name,
         createdAt: user.createdAt.toISOString(),
       },
-      300
+      this.eventPublisher,
+      this.cache
     );
 
     const accessToken = this.tokenService.sign({

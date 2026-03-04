@@ -8,7 +8,7 @@ import type { IOAuthProvider } from "../ports/oauth-provider.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { ICacheService } from "@lframework/shared";
 import type { IEventPublisher } from "../ports/event-publisher.port";
-import { USER_CREATED_EVENT } from "@lframework/shared";
+import { publishUserCreatedAndCache } from "../services/user-created-notify";
 import type { OAuthCallbackResponseDto } from "../dtos/oauth-callback-response.dto";
 
 export type OAuthCallbackResultDto = Omit<OAuthCallbackResponseDto, "expiresIn">;
@@ -72,23 +72,15 @@ export class OAuthCallbackUseCase {
         userInfo.providerId
       );
 
-      await this.eventPublisher.publish(USER_CREATED_EVENT, {
-        userId: user.id,
-        email: user.email.value,
-        name: user.name,
-        occurredAt: user.createdAt.toISOString(),
-      });
-
-      const cacheKey = `user:${user.id}`;
-      await this.cache.set(
-        cacheKey,
+      await publishUserCreatedAndCache(
         {
           id: user.id,
           email: user.email.value,
           name: user.name,
           createdAt: user.createdAt.toISOString(),
         },
-        300
+        this.eventPublisher,
+        this.cache
       );
     } else {
       await this.oauthAccountRepository.save(user.id, provider.provider, userInfo.providerId);

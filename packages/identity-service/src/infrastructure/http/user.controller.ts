@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { z } from "zod";
 import { CreateUserUseCase } from "../../application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "../../application/use-cases/get-user-by-id.use-case";
@@ -7,12 +7,14 @@ import {
   InvalidEmailError,
 } from "../../application/errors";
 import type { CreateUserDto } from "../../application/dtos/create-user.dto";
-import type { ErrorResponseDto } from "../../application/dtos/error-response.dto";
+import type { AuthenticatedRequest } from "./auth.middleware";
+import { sendError } from "./utils/send-error";
 
 const uuidParamSchema = z.string().uuid();
 
 /**
  * Adapter (entrada): controller HTTP que delega aos casos de uso.
+ * Rotas protegidas por authMiddleware (+ requireRole em create).
  */
 export class UserController {
   constructor(
@@ -20,46 +22,46 @@ export class UserController {
     private readonly getUserByIdUseCase: GetUserByIdUseCase
   ) {}
 
-  create = async (req: Request, res: Response): Promise<void> => {
+  create = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const dto: CreateUserDto = req.body;
       const result = await this.createUserUseCase.execute(dto);
       res.status(201).json(result);
     } catch (err) {
-      const errorBody: ErrorResponseDto = { error: err instanceof Error ? err.message : "Internal server error" };
+      const message = err instanceof Error ? err.message : "Internal server error";
       if (err instanceof UserAlreadyExistsError) {
-        res.status(409).json(errorBody);
+        sendError(res, 409, message);
         return;
       }
       if (err instanceof InvalidEmailError) {
-        res.status(400).json(errorBody);
+        sendError(res, 400, message);
         return;
       }
-      res.status(500).json({ error: "Internal server error" } as ErrorResponseDto);
+      sendError(res, 500, "Internal server error");
     }
   };
 
-  getById = async (req: Request, res: Response): Promise<void> => {
+  getById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const parsed = uuidParamSchema.safeParse(id);
       if (!parsed.success) {
-        res.status(400).json({ error: "Invalid user id format" } as ErrorResponseDto);
+        sendError(res, 400, "Invalid user id format");
         return;
       }
       const userId = parsed.data;
       if (req.userId !== userId && req.userRole !== "admin") {
-        res.status(403).json({ error: "Forbidden" } as ErrorResponseDto);
+        sendError(res, 403, "Forbidden");
         return;
       }
       const user = await this.getUserByIdUseCase.execute(userId);
       if (!user) {
-        res.status(404).json({ error: "User not found" } as ErrorResponseDto);
+        sendError(res, 404, "User not found");
         return;
       }
       res.json(user);
     } catch {
-      res.status(500).json({ error: "Internal server error" } as ErrorResponseDto);
+      sendError(res, 500, "Internal server error");
     }
   };
 }

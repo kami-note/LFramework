@@ -1,10 +1,18 @@
 import amqp, { ConsumeMessage } from "amqplib";
+import { z } from "zod";
 import type { UserCreatedPayload } from "@lframework/shared";
 import {
   USER_CREATED_EVENT,
   EXCHANGE_USER_EVENTS,
   QUEUE_USER_CREATED_CATALOG,
 } from "@lframework/shared";
+
+const userCreatedPayloadSchema = z.object({
+  userId: z.string(),
+  email: z.string().email(),
+  name: z.string(),
+  occurredAt: z.string(),
+});
 
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
 
@@ -35,10 +43,18 @@ export class RabbitMqUserCreatedConsumer {
       if (!msg || !this.handler || !this.channel) return;
       try {
         const body = JSON.parse(msg.content.toString());
-        if (body.type === USER_CREATED_EVENT && body.payload) {
-          const payload = body.payload as UserCreatedPayload;
-          await this.handler(payload);
+        if (body.type !== USER_CREATED_EVENT || !body.payload) {
+          this.channel.ack(msg);
+          return;
         }
+        const parsed = userCreatedPayloadSchema.safeParse(body.payload);
+        if (!parsed.success) {
+          console.error("Invalid UserCreated payload:", parsed.error.flatten());
+          this.channel.nack(msg, false, false);
+          return;
+        }
+        const payload: UserCreatedPayload = parsed.data;
+        await this.handler(payload);
         this.channel.ack(msg);
       } catch (err) {
         console.error("Error processing UserCreated:", err);
