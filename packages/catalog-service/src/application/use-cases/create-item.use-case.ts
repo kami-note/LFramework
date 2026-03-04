@@ -4,15 +4,8 @@ import { Money } from "../../domain/value-objects/money.vo";
 import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
 import type { ICacheService } from "@lframework/shared";
 import type { CreateItemDto } from "../dtos/create-item.dto";
+import type { ItemResponseDto } from "../dtos/item-response.dto";
 import { InvalidItemError } from "../errors";
-
-export interface CreateItemUseCaseResult {
-  id: string;
-  name: string;
-  priceAmount: number;
-  priceCurrency: string;
-  createdAt: Date;
-}
 
 export class CreateItemUseCase {
   constructor(
@@ -20,7 +13,7 @@ export class CreateItemUseCase {
     private readonly cache: ICacheService
   ) {}
 
-  async execute(dto: CreateItemDto): Promise<CreateItemUseCaseResult> {
+  async execute(dto: CreateItemDto): Promise<ItemResponseDto> {
     const id = randomUUID();
     try {
       const price = Money.create(dto.priceAmount, dto.priceCurrency);
@@ -29,13 +22,14 @@ export class CreateItemUseCase {
 
       await this.cache.delete("items:list");
 
-      return {
+      const result: ItemResponseDto = {
         id: item.id,
         name: item.name,
         priceAmount: item.price.amount,
         priceCurrency: item.price.currency,
-        createdAt: item.createdAt,
+        createdAt: item.createdAt.toISOString(),
       };
+      return result;
     } catch (err) {
       throw new InvalidItemError(err instanceof Error ? err.message : "Invalid item");
     }

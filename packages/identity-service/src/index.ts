@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { createContainer } from "./container";
+import type { HealthResponseDto } from "./infrastructure/http/dtos/health-response.dto";
 
 const port = parseInt(process.env.IDENTITY_SERVICE_PORT ?? "3001", 10);
 const databaseUrl = process.env.IDENTITY_DATABASE_URL ?? "postgresql://lframework:lframework@localhost:5432/lframework_identity";
@@ -52,7 +53,8 @@ async function bootstrap() {
   app.use("/api", container.authRoutes);
 
   app.get("/health", (_req, res) => {
-    res.json({ status: "ok", service: "identity-service" });
+    const body: HealthResponseDto = { status: "ok", service: "identity-service" };
+    res.json(body);
   });
 
   app.listen(port, () => {

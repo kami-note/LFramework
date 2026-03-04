@@ -7,6 +7,13 @@ import type { IOAuthProvider } from "../../application/ports/oauth-provider.port
 import type { ICacheService } from "@lframework/shared";
 import type { RegisterDto } from "../../application/dtos/register.dto";
 import type { LoginDto } from "../../application/dtos/login.dto";
+import type { AuthResponseDto } from "../../application/dtos/auth-response.dto";
+import type { OAuthCallbackResponseDto } from "../../application/dtos/oauth-callback-response.dto";
+import type { ErrorResponseDto } from "../../application/dtos/error-response.dto";
+import {
+  oauthCallbackQuerySchema,
+  type OAuthCallbackQueryDto,
+} from "../../application/dtos/oauth-callback-query.dto";
 import { formatExpiresIn } from "./utils/format-expires-in";
 import { performOAuthRedirect, OAUTH_STATE_PREFIX } from "./utils/oauth-redirect";
 import {
@@ -16,22 +23,9 @@ import {
   PasswordValidationError,
 } from "../../application/errors";
 
-function getCodeFromQuery(req: Request): string | null {
-  const raw = req.query.code;
-  if (Array.isArray(raw)) {
-    const first = raw[0];
-    return typeof first === "string" ? first : null;
-  }
-  return typeof raw === "string" ? raw : null;
-}
-
-function getStateFromQuery(req: Request): string | null {
-  const raw = req.query.state;
-  if (Array.isArray(raw)) {
-    const first = raw[0];
-    return typeof first === "string" ? first : null;
-  }
-  return typeof raw === "string" ? raw : null;
+function sendError(res: Response, status: number, message: string): void {
+  const body: ErrorResponseDto = { error: message };
+  res.status(status).json(body);
 }
 
 export class AuthController {
@@ -51,21 +45,22 @@ export class AuthController {
     try {
       const dto: RegisterDto = req.body;
       const result = await this.registerUseCase.execute(dto);
-      res.status(201).json({
-        user: { id: result.id, email: result.email, name: result.name, createdAt: result.createdAt.toISOString() },
+      const body: AuthResponseDto = {
+        user: result.user,
         accessToken: result.accessToken,
         expiresIn: formatExpiresIn(this.jwtExpiresInSeconds),
-      });
+      };
+      res.status(201).json(body);
     } catch (err) {
       if (err instanceof UserAlreadyExistsError) {
-        res.status(409).json({ error: err.message });
+        sendError(res, 409, err.message);
         return;
       }
       if (err instanceof InvalidEmailError || err instanceof PasswordValidationError) {
-        res.status(400).json({ error: err.message });
+        sendError(res, 400, err.message);
         return;
       }
-      res.status(500).json({ error: "Internal server error" });
+      sendError(res, 500, "Internal server error");
     }
   };
 
@@ -73,17 +68,18 @@ export class AuthController {
     try {
       const dto: LoginDto = req.body;
       const result = await this.loginUseCase.execute(dto);
-      res.json({
-        user: { id: result.id, email: result.email, name: result.name },
+      const body: AuthResponseDto = {
+        user: result.user,
         accessToken: result.accessToken,
         expiresIn: formatExpiresIn(this.jwtExpiresInSeconds),
-      });
+      };
+      res.json(body);
     } catch (err) {
       if (err instanceof InvalidCredentialsError) {
-        res.status(401).json({ error: err.message });
+        sendError(res, 401, err.message);
         return;
       }
-      res.status(500).json({ error: "Internal server error" });
+      sendError(res, 500, "Internal server error");
     }
   };
 
@@ -91,23 +87,23 @@ export class AuthController {
     try {
       const userId = req.userId;
       if (!userId) {
-        res.status(401).json({ error: "Unauthorized" });
+        sendError(res, 401, "Unauthorized");
         return;
       }
       const user = await this.getCurrentUserUseCase.execute(userId);
       if (!user) {
-        res.status(404).json({ error: "User not found" });
+        sendError(res, 404, "User not found");
         return;
       }
       res.json(user);
     } catch {
-      res.status(500).json({ error: "Internal server error" });
+      sendError(res, 500, "Internal server error");
     }
   };
 
   googleRedirect = async (req: Request, res: Response): Promise<void> => {
     if (!this.googleProvider) {
-      res.status(503).json({ error: "Google OAuth is not configured" });
+      sendError(res, 503, "Google OAuth is not configured");
       return;
     }
     await performOAuthRedirect(this.googleProvider, "google", res, this.cache, this.baseUrl);
@@ -119,7 +115,7 @@ export class AuthController {
 
   githubRedirect = async (req: Request, res: Response): Promise<void> => {
     if (!this.githubProvider) {
-      res.status(503).json({ error: "GitHub OAuth is not configured" });
+      sendError(res, 503, "GitHub OAuth is not configured");
       return;
     }
     await performOAuthRedirect(this.githubProvider, "github", res, this.cache, this.baseUrl);
@@ -136,46 +132,40 @@ export class AuthController {
     providerName: string
   ): Promise<void> => {
     if (!provider) {
-      res.status(503).json({ error: providerName + " OAuth is not configured" });
+      sendError(res, 503, providerName + " OAuth is not configured");
       return;
     }
-    const code = getCodeFromQuery(req);
-    const state = getStateFromQuery(req);
-    if (!code) {
-      res.status(400).json({ error: "Missing or invalid code" });
+    const code = Array.isArray(req.query.code) ? req.query.code[0] : req.query.code;
+    const state = Array.isArray(req.query.state) ? req.query.state[0] : req.query.state;
+    const parsed = oauthCallbackQuerySchema.safeParse({ code, state });
+    if (!parsed.success) {
+      const message = parsed.error.errors[0]?.message ?? "Invalid query";
+      sendError(res, 400, message);
       return;
     }
-    if (!state) {
-      res.status(400).json({ error: "Missing state" });
-      return;
-    }
-    const stateKey = OAUTH_STATE_PREFIX + state;
+    const query: OAuthCallbackQueryDto = parsed.data;
+    const stateKey = OAUTH_STATE_PREFIX + query.state;
     const stateValid = await this.cache.get<string>(stateKey);
     if (!stateValid) {
-      res.status(400).json({ error: "Invalid or expired state" });
+      sendError(res, 400, "Invalid or expired state");
       return;
     }
     await this.cache.delete(stateKey);
 
     try {
       const redirectUri = this.baseUrl + "/api/auth/" + providerName + "/callback";
-      const result = await this.oauthCallbackUseCase.execute(code, redirectUri, provider);
-      res.json({
-        user: {
-          id: result.id,
-          email: result.email,
-          name: result.name,
-          createdAt: result.createdAt.toISOString(),
-          isNewUser: result.isNewUser,
-        },
+      const result = await this.oauthCallbackUseCase.execute(query.code, redirectUri, provider);
+      const body: OAuthCallbackResponseDto = {
+        user: result.user,
         accessToken: result.accessToken,
         expiresIn: formatExpiresIn(this.jwtExpiresInSeconds),
-      });
+      };
+      res.json(body);
     } catch (err) {
       const safeMessage = err instanceof Error ? err.message : "Unknown error";
       const safeName = err instanceof Error ? err.name : "Error";
       console.error("OAuth callback (" + providerName + ") failed:", safeName, safeMessage);
-      res.status(400).json({ error: "OAuth failed" });
+      sendError(res, 400, "OAuth failed");
     }
   };
 }

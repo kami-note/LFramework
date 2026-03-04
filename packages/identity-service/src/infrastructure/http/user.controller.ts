@@ -6,6 +6,7 @@ import {
   InvalidEmailError,
 } from "../../application/errors";
 import type { CreateUserDto } from "../../application/dtos/create-user.dto";
+import type { ErrorResponseDto } from "../../application/dtos/error-response.dto";
 
 /**
  * Adapter (entrada): controller HTTP que delega aos casos de uso.
@@ -20,22 +21,18 @@ export class UserController {
     try {
       const dto: CreateUserDto = req.body;
       const result = await this.createUserUseCase.execute(dto);
-      res.status(201).json({
-        id: result.id,
-        email: result.email,
-        name: result.name,
-        createdAt: result.createdAt.toISOString(),
-      });
+      res.status(201).json(result);
     } catch (err) {
+      const errorBody: ErrorResponseDto = { error: err instanceof Error ? err.message : "Internal server error" };
       if (err instanceof UserAlreadyExistsError) {
-        res.status(409).json({ error: err.message });
+        res.status(409).json(errorBody);
         return;
       }
       if (err instanceof InvalidEmailError) {
-        res.status(400).json({ error: err.message });
+        res.status(400).json(errorBody);
         return;
       }
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: "Internal server error" } as ErrorResponseDto);
     }
   };
 
@@ -44,12 +41,12 @@ export class UserController {
       const { id } = req.params;
       const user = await this.getUserByIdUseCase.execute(id);
       if (!user) {
-        res.status(404).json({ error: "User not found" });
+        res.status(404).json({ error: "User not found" } as ErrorResponseDto);
         return;
       }
       res.json(user);
     } catch {
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: "Internal server error" } as ErrorResponseDto);
     }
   };
 }

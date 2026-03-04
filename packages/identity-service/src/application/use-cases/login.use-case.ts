@@ -3,12 +3,11 @@ import type { IAuthCredentialRepository } from "../../domain/repository-interfac
 import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { LoginDto } from "../dtos/login.dto";
+import type { AuthUserDto } from "../dtos/auth-response.dto";
 import { InvalidCredentialsError } from "../errors";
 
-export interface LoginResult {
-  id: string;
-  email: string;
-  name: string;
+export interface LoginResultDto {
+  user: AuthUserDto;
   accessToken: string;
 }
 
@@ -20,7 +19,7 @@ export class LoginUseCase {
     private readonly tokenService: ITokenService
   ) {}
 
-  async execute(dto: LoginDto): Promise<LoginResult> {
+  async execute(dto: LoginDto): Promise<LoginResultDto> {
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user) {
       throw new InvalidCredentialsError("Invalid email or password");
@@ -42,9 +41,11 @@ export class LoginUseCase {
     });
 
     return {
-      id: user.id,
-      email: user.email.value,
-      name: user.name,
+      user: {
+        id: user.id,
+        email: user.email.value,
+        name: user.name,
+      },
       accessToken,
     };
   }

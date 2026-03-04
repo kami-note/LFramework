@@ -9,15 +9,9 @@ import type { ITokenService } from "../ports/token-service.port";
 import type { ICacheService } from "@lframework/shared";
 import type { IEventPublisher } from "../ports/event-publisher.port";
 import { USER_CREATED_EVENT } from "@lframework/shared";
+import type { OAuthCallbackResponseDto } from "../dtos/oauth-callback-response.dto";
 
-export interface OAuthCallbackResult {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: Date;
-  accessToken: string;
-  isNewUser: boolean;
-}
+export type OAuthCallbackResultDto = Omit<OAuthCallbackResponseDto, "expiresIn">;
 
 export class OAuthCallbackUseCase {
   constructor(
@@ -33,7 +27,7 @@ export class OAuthCallbackUseCase {
     code: string,
     redirectUri: string,
     provider: IOAuthProvider
-  ): Promise<OAuthCallbackResult> {
+  ): Promise<OAuthCallbackResultDto> {
     const userInfo = await provider.getUserInfoFromCode(code, redirectUri);
     if (!userInfo) {
       throw new Error("Failed to get user info from OAuth provider");
@@ -52,12 +46,14 @@ export class OAuthCallbackUseCase {
         email: user.email.value,
       });
       return {
-        id: user.id,
-        email: user.email.value,
-        name: user.name,
-        createdAt: user.createdAt,
+        user: {
+          id: user.id,
+          email: user.email.value,
+          name: user.name,
+          createdAt: user.createdAt.toISOString(),
+          isNewUser: false,
+        },
         accessToken,
-        isNewUser: false,
       };
     }
 
@@ -103,12 +99,14 @@ export class OAuthCallbackUseCase {
     });
 
     return {
-      id: user.id,
-      email: user.email.value,
-      name: user.name,
-      createdAt: user.createdAt,
+      user: {
+        id: user.id,
+        email: user.email.value,
+        name: user.name,
+        createdAt: user.createdAt.toISOString(),
+        isNewUser,
+      },
       accessToken,
-      isNewUser,
     };
   }
 }

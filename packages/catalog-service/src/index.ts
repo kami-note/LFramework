@@ -1,5 +1,6 @@
 import express from "express";
 import { createContainer } from "./container";
+import type { HealthResponseDto } from "./infrastructure/http/dtos/health-response.dto";
 
 const port = parseInt(process.env.CATALOG_SERVICE_PORT ?? "3002", 10);
 const databaseUrl =
@@ -26,7 +27,8 @@ async function bootstrap() {
   app.use("/api", container.itemRoutes);
 
   app.get("/health", (_req, res) => {
-    res.json({ status: "ok", service: "catalog-service" });
+    const body: HealthResponseDto = { status: "ok", service: "catalog-service" };
+    res.json(body);
   });
 
   app.listen(port, () => {

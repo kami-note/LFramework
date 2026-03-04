@@ -5,15 +5,9 @@ import type { IUserRepository } from "../../domain/repository-interfaces/user-re
 import type { ICacheService } from "@lframework/shared";
 import type { IEventPublisher } from "../ports/event-publisher.port";
 import type { CreateUserDto } from "../dtos/create-user.dto";
+import type { UserResponseDto } from "../dtos/user-response.dto";
 import { USER_CREATED_EVENT } from "@lframework/shared";
 import { UserAlreadyExistsError, InvalidEmailError } from "../errors";
-
-export interface CreateUserUseCaseResult {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: Date;
-}
 
 export class CreateUserUseCase {
   constructor(
@@ -22,7 +16,7 @@ export class CreateUserUseCase {
     private readonly eventPublisher: IEventPublisher
   ) {}
 
-  async execute(dto: CreateUserDto): Promise<CreateUserUseCaseResult> {
+  async execute(dto: CreateUserDto): Promise<UserResponseDto> {
     let email: Email;
     try {
       email = Email.create(dto.email);
@@ -57,11 +51,12 @@ export class CreateUserUseCase {
       300
     );
 
-    return {
+    const result: UserResponseDto = {
       id: user.id,
       email: user.email.value,
       name: user.name,
-      createdAt: user.createdAt,
+      createdAt: user.createdAt.toISOString(),
     };
+    return result;
   }
 }

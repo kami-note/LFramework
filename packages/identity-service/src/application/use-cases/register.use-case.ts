@@ -9,16 +9,14 @@ import type { IEventPublisher } from "../ports/event-publisher.port";
 import type { ICacheService } from "@lframework/shared";
 import { USER_CREATED_EVENT } from "@lframework/shared";
 import type { RegisterDto } from "../dtos/register.dto";
+import type { AuthUserDto } from "../dtos/auth-response.dto";
 import {
   UserAlreadyExistsError,
   InvalidEmailError,
 } from "../errors";
 
-export interface RegisterResult {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: Date;
+export interface RegisterResultDto {
+  user: AuthUserDto;
   accessToken: string;
 }
 
@@ -32,7 +30,7 @@ export class RegisterUseCase {
     private readonly eventPublisher: IEventPublisher
   ) {}
 
-  async execute(dto: RegisterDto): Promise<RegisterResult> {
+  async execute(dto: RegisterDto): Promise<RegisterResultDto> {
     let email: Email;
     try {
       email = Email.create(dto.email);
@@ -75,10 +73,12 @@ export class RegisterUseCase {
     });
 
     return {
-      id: user.id,
-      email: user.email.value,
-      name: user.name,
-      createdAt: user.createdAt,
+      user: {
+        id: user.id,
+        email: user.email.value,
+        name: user.name,
+        createdAt: user.createdAt.toISOString(),
+      },
       accessToken,
     };
   }

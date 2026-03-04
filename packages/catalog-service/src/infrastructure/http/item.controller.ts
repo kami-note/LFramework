@@ -3,6 +3,7 @@ import { CreateItemUseCase } from "../../application/use-cases/create-item.use-c
 import { ListItemsUseCase } from "../../application/use-cases/list-items.use-case";
 import { InvalidItemError } from "../../application/errors";
 import type { CreateItemDto } from "../../application/dtos/create-item.dto";
+import type { ErrorResponseDto } from "../../application/dtos/error-response.dto";
 
 export class ItemController {
   constructor(
@@ -14,19 +15,15 @@ export class ItemController {
     try {
       const dto: CreateItemDto = req.body;
       const result = await this.createItemUseCase.execute(dto);
-      res.status(201).json({
-        id: result.id,
-        name: result.name,
-        priceAmount: result.priceAmount,
-        priceCurrency: result.priceCurrency,
-        createdAt: result.createdAt.toISOString(),
-      });
+      res.status(201).json(result);
     } catch (err) {
       if (err instanceof InvalidItemError) {
-        res.status(400).json({ error: err.message });
+        const body: ErrorResponseDto = { error: err.message };
+        res.status(400).json(body);
         return;
       }
-      res.status(500).json({ error: "Internal server error" });
+      const body: ErrorResponseDto = { error: "Internal server error" };
+      res.status(500).json(body);
     }
   };
 
@@ -35,7 +32,8 @@ export class ItemController {
       const items = await this.listItemsUseCase.execute();
       res.json(items);
     } catch {
-      res.status(500).json({ error: "Internal server error" });
+      const body: ErrorResponseDto = { error: "Internal server error" };
+      res.status(500).json(body);
     }
   };
 }
