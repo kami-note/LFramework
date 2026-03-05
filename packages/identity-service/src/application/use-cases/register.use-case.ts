@@ -27,12 +27,20 @@ export class RegisterUseCase {
     private readonly userCreatedNotifier: IUserCreatedNotifier
   ) {}
 
+  /**
+   * Email.create lança Error("Invalid email") em falha de validação.
+   * Pode lançar TypeError se value for null/undefined. Apenas erros de
+   * validação são convertidos para InvalidEmailError; demais são rethrown.
+   */
   async execute(dto: RegisterDto): Promise<RegisterResultDto> {
     let email: Email;
     try {
       email = Email.create(dto.email);
-    } catch {
-      throw new InvalidEmailError("Invalid email");
+    } catch (err) {
+      if (err instanceof Error && err.message === "Invalid email") {
+        throw new InvalidEmailError("Invalid email");
+      }
+      throw err;
     }
     const existing = await this.userRepository.findByEmail(email.value);
     if (existing) {

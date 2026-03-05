@@ -1,4 +1,5 @@
 import amqp, { ConsumeMessage } from "amqplib";
+import { LRUCache } from "lru-cache";
 import { z } from "zod";
 import type { UserCreatedPayload } from "@lframework/shared";
 import {
@@ -10,6 +11,13 @@ import {
 } from "@lframework/shared";
 
 /** Não confiamos no publisher: validamos payload com as mesmas regras de nome/email e occurredAt. */
+
+/**
+ * Número máximo de tentativas de processamento antes de descartar a mensagem.
+ * Após MAX_RETRIES falhas consecutivas (no mesmo worker), a mensagem é descartada
+ * (nack sem requeue) e logada para inspeção, evitando loop infinito por falha persistente.
+ */
+const MAX_RETRIES = 5;
 
 const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LENGTH = 254;
@@ -41,10 +49,17 @@ type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
 
 /**
  * Adapter: consome evento UserCreated do RabbitMQ e chama o handler registrado.
+ * Em falha de processamento: requeue até MAX_RETRIES vezes; após isso, descarta a mensagem
+ * (nack sem requeue) e loga para inspeção, evitando loop infinito.
  */
 export class RabbitMqUserCreatedConsumer {
   private handler: ((payload: UserCreatedPayload) => Promise<void>) | null = null;
   private channel: amqp.Channel | null = null;
+  /** Contador de retries por chave da mensagem (content). Após MAX_RETRIES, descartamos sem requeue. */
+  private readonly retryCountByMessageKey = new LRUCache<string, number>({
+    max: 10_000,
+    ttl: 1000 * 60 * 60, // 1 hora; entradas expiram se não acessadas
+  });
 
   constructor(private readonly connection: AmqpConnection) {}
 
@@ -78,10 +93,24 @@ export class RabbitMqUserCreatedConsumer {
         }
         const payload: UserCreatedPayload = parsed.data;
         await this.handler(payload);
+        this.retryCountByMessageKey.delete(msg.content.toString());
         this.channel.ack(msg);
       } catch (err) {
-        logger.error({ err }, "Error processing UserCreated");
-        this.channel.nack(msg, false, true);
+        const messageKey = msg.content.toString();
+        const count = (this.retryCountByMessageKey.get(messageKey) ?? 0) + 1;
+        this.retryCountByMessageKey.set(messageKey, count);
+
+        if (count >= MAX_RETRIES) {
+          logger.error(
+            { err, retries: count, messageKey: messageKey.slice(0, 200) },
+            "UserCreated message discarded after MAX_RETRIES attempts (no requeue)"
+          );
+          this.retryCountByMessageKey.delete(messageKey);
+          this.channel.nack(msg, false, false);
+        } else {
+          logger.warn({ err, retry: count, maxRetries: MAX_RETRIES }, "Error processing UserCreated, requeuing");
+          this.channel.nack(msg, false, true);
+        }
       }
     });
   }

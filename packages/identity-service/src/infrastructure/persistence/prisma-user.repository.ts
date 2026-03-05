@@ -1,10 +1,13 @@
+import { Prisma } from "@prisma/client";
 import { PrismaClient } from "../../../generated/prisma-client";
 import { User } from "../../domain/entities/user.entity";
 import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
 import { UserAlreadyExistsError } from "../../application/errors";
 
 function isPrismaP2002(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002"
+  );
 }
 
 /**

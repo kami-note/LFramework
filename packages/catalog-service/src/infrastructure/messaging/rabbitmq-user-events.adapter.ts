@@ -11,6 +11,9 @@ export class RabbitMqUserEventsAdapter implements IEventConsumer {
   private handler: ((payload: UserCreatedPayload) => Promise<void>) | null = null;
   private consumer: RabbitMqUserCreatedConsumer | null = null;
 
+  /** Timeout de conexão em ms (evita espera indefinida se o broker estiver indisponível). */
+  private static readonly CONNECT_TIMEOUT_MS = 10_000;
+
   constructor(private readonly rabbitmqUrl: string) {}
 
   onUserCreated(handler: (payload: UserCreatedPayload) => Promise<void>): void {
@@ -21,7 +24,9 @@ export class RabbitMqUserEventsAdapter implements IEventConsumer {
     if (!this.handler) {
       throw new Error("Registre o handler com onUserCreated() antes de start()");
     }
-    const connection = await amqp.connect(this.rabbitmqUrl);
+    const connection = await amqp.connect(this.rabbitmqUrl, {
+      timeout: RabbitMqUserEventsAdapter.CONNECT_TIMEOUT_MS,
+    });
     this.consumer = new RabbitMqUserCreatedConsumer(connection);
     this.consumer.onUserCreated(this.handler);
     await this.consumer.start();

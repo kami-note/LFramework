@@ -1,9 +1,11 @@
 import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
 import type { ICacheService } from "@lframework/shared";
-import type { ItemResponseDto } from "../dtos/item-response.dto";
+import { itemResponseDtoSchema, type ItemResponseDto } from "../dtos/item-response.dto";
+import { z } from "zod";
 
 const CACHE_KEY = "items:list";
 const CACHE_TTL = 60;
+const itemsListCacheSchema = z.array(itemResponseDtoSchema);
 
 export class ListItemsUseCase {
   constructor(
@@ -12,8 +14,9 @@ export class ListItemsUseCase {
   ) {}
 
   async execute(): Promise<ItemResponseDto[]> {
-    const cached = await this.cache.get<ItemResponseDto[]>(CACHE_KEY);
-    if (cached && Array.isArray(cached)) {
+    // Schema Zod valida o cache; se inválido, retorna null (cache miss). Não precisa Array.isArray.
+    const cached = await this.cache.get(CACHE_KEY, itemsListCacheSchema);
+    if (cached) {
       return cached;
     }
 

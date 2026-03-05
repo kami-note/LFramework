@@ -55,7 +55,7 @@ export class AuthController {
         accessToken: result.accessToken,
         expiresIn: formatExpiresIn(this.jwtExpiresInSeconds),
       };
-      res.json(body);
+      res.status(200).json(body);
     } catch (err) {
       next(err);
     }
@@ -74,6 +74,7 @@ export class AuthController {
     }
   };
 
+  /** async + await performOAuthRedirect para compatibilidade com asyncHandler e propagação de erros. */
   googleRedirect = async (req: Request, res: Response): Promise<void> => {
     if (!this.googleProvider) {
       sendError(res, 503, "Google OAuth is not configured");
@@ -86,6 +87,7 @@ export class AuthController {
     await this.handleOAuthCallback(req, res, next, this.googleProvider, "google");
   };
 
+  /** async + await performOAuthRedirect para compatibilidade com asyncHandler e propagação de erros. */
   githubRedirect = async (req: Request, res: Response): Promise<void> => {
     if (!this.githubProvider) {
       sendError(res, 503, "GitHub OAuth is not configured");

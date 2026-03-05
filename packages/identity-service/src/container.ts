@@ -42,7 +42,10 @@ export interface ContainerConfig {
  */
 export function createContainer(config: ContainerConfig) {
   const prisma = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
-  const redis = new Redis(config.redisUrl);
+  const redis = new Redis(config.redisUrl, {
+    connectTimeout: 5000,
+    commandTimeout: 5000,
+  });
   const eventPublisher = new RabbitMqEventPublisherAdapter(config.rabbitmqUrl);
 
   const userRepository = new PrismaUserRepository(prisma);

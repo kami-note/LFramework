@@ -46,6 +46,7 @@ describe("ListItemsUseCase", () => {
       priceCurrency: "BRL",
       createdAt: "2025-01-02T00:00:00.000Z",
     });
+    expect(cache.get).toHaveBeenCalledWith("items:list", expect.anything());
     expect(cache.set).toHaveBeenCalledWith("items:list", result, 60);
   });
 

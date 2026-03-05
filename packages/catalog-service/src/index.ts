@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { createContainer } from "./container";
 import {
   requestIdMiddleware,
@@ -8,6 +9,10 @@ import {
 } from "@lframework/shared";
 
 const port = parseInt(process.env.CATALOG_SERVICE_PORT ?? "3002", 10);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  logger.error("CATALOG_SERVICE_PORT must be a valid port (1-65535)");
+  process.exit(1);
+}
 const isProduction = process.env.NODE_ENV === "production";
 
 if (isProduction && !process.env.CATALOG_DATABASE_URL) {
@@ -27,12 +32,16 @@ if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 
   process.exit(1);
 }
 
-const databaseUrl =
-  process.env.CATALOG_DATABASE_URL ??
-  "postgresql://lframework:lframework@localhost:5432/lframework";
-const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
-const rabbitmqUrl =
-  process.env.RABBITMQ_URL ?? "amqp://lframework:lframework@localhost:5672";
+// Em produção as URLs vêm sempre de variáveis de ambiente (sem default com credenciais).
+const databaseUrl = isProduction
+  ? process.env.CATALOG_DATABASE_URL!
+  : (process.env.CATALOG_DATABASE_URL ?? "postgresql://lframework:lframework@localhost:5432/lframework");
+const redisUrl = isProduction
+  ? process.env.REDIS_URL!
+  : (process.env.REDIS_URL ?? "redis://localhost:6379");
+const rabbitmqUrl = isProduction
+  ? process.env.RABBITMQ_URL!
+  : (process.env.RABBITMQ_URL ?? "amqp://lframework:lframework@localhost:5672");
 const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "dev-secret-min-32-chars-for-jwt-signing");
 
 async function bootstrap() {
@@ -49,6 +58,15 @@ async function bootstrap() {
 
   const app = express();
   app.use(requestIdMiddleware);
+  const corsOrigin = process.env.CORS_ORIGIN;
+  if (corsOrigin) {
+    app.use(
+      cors({
+        origin: corsOrigin.split(",").map((s) => s.trim()),
+        credentials: true,
+      })
+    );
+  }
   app.use(express.json({ limit: "512kb" }));
   app.use("/api", container.itemRoutes);
 
@@ -61,8 +79,13 @@ async function bootstrap() {
   });
 
   process.on("SIGTERM", async () => {
-    await container.disconnect();
-    process.exit(0);
+    try {
+      await container.disconnect();
+      process.exit(0);
+    } catch (err) {
+      logger.error({ err }, "Disconnect failed on SIGTERM");
+      process.exit(1);
+    }
   });
 }
 

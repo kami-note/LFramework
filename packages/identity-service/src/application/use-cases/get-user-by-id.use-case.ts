@@ -1,6 +1,6 @@
 import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
 import type { ICacheService } from "@lframework/shared";
-import type { UserResponseDto } from "../dtos/user-response.dto";
+import { userResponseDtoSchema, type UserResponseDto } from "../dtos/user-response.dto";
 
 export class GetUserByIdUseCase {
   constructor(
@@ -10,7 +10,7 @@ export class GetUserByIdUseCase {
 
   async execute(id: string): Promise<UserResponseDto | null> {
     const cacheKey = `user:${id}`;
-    const cached = await this.cache.get<UserResponseDto>(cacheKey);
+    const cached = await this.cache.get(cacheKey, userResponseDtoSchema);
     if (cached) {
       return cached;
     }

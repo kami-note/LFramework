@@ -1,17 +1,16 @@
 import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
 import type { UserCreatedPayload } from "@lframework/shared";
-import { RedisCacheAdapter } from "@lframework/shared";
+import { RedisCacheAdapter, createAuthMiddleware } from "@lframework/shared";
 import { PrismaItemRepository } from "./infrastructure/persistence/prisma-item.repository";
 import { ItemsListCacheInvalidatorAdapter } from "./infrastructure/cache/items-list-cache-invalidator.adapter";
 import { RabbitMqUserEventsAdapter } from "./infrastructure/messaging/rabbitmq-user-events.adapter";
+import { JwtTokenVerifierAdapter } from "./infrastructure/auth/jwt-token-verifier.adapter";
 import { CreateItemUseCase } from "./application/use-cases/create-item.use-case";
 import { ListItemsUseCase } from "./application/use-cases/list-items.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
 import { ItemController } from "./infrastructure/http/item.controller";
 import { createItemRoutes } from "./infrastructure/http/routes";
-import jwt from "jsonwebtoken";
-import { createAuthMiddleware } from "@lframework/shared";
 import { mapApplicationErrorToHttp } from "./application/http/error-to-http.mapper";
 
 export function createContainer(config: {
@@ -23,7 +22,10 @@ export function createContainer(config: {
   const prisma = new PrismaClient({
     datasources: { db: { url: config.databaseUrl } },
   });
-  const redis = new Redis(config.redisUrl);
+  const redis = new Redis(config.redisUrl, {
+    connectTimeout: 5000,
+    commandTimeout: 5000,
+  });
 
   const itemRepository = new PrismaItemRepository(prisma);
   const cache = new RedisCacheAdapter(redis);
@@ -34,16 +36,8 @@ export function createContainer(config: {
   const handleUserCreatedUseCase = new HandleUserCreatedUseCase(cache);
 
   const itemController = new ItemController(createItemUseCase, listItemsUseCase);
-  const authMiddleware = createAuthMiddleware((token) => {
-    try {
-      const decoded = jwt.verify(token, config.jwtSecret, {
-        algorithms: ["HS256"],
-      }) as { sub?: string };
-      return decoded.sub ? { sub: decoded.sub } : null;
-    } catch {
-      return null;
-    }
-  });
+  const tokenVerifier = new JwtTokenVerifierAdapter(config.jwtSecret);
+  const authMiddleware = createAuthMiddleware((token) => tokenVerifier.verify(token));
   const itemRoutes = createItemRoutes(itemController, authMiddleware);
 
   const eventConsumer: RabbitMqUserEventsAdapter = new RabbitMqUserEventsAdapter(config.rabbitmqUrl);

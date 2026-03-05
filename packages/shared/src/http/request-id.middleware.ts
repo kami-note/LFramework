@@ -17,11 +17,9 @@ export function requestIdMiddleware(
   res: Response,
   next: NextFunction
 ): void {
-  const raw =
-    (req.headers[HEADER_NAME] as string) ??
-    (req.headers["request-id"] as string);
-  const trimmed =
-    typeof raw === "string" ? raw.trim() : "";
+  const headerValue = req.headers[HEADER_NAME] ?? req.headers["request-id"];
+  const raw = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
   const requestId =
     trimmed.length > 0 && trimmed.length <= MAX_HEADER_LENGTH
       ? trimmed

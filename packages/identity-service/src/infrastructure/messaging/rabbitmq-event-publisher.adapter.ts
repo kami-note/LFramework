@@ -13,10 +13,15 @@ export class RabbitMqEventPublisherAdapter implements IEventPublisher {
   private channel: amqp.Channel | null = null;
   private readonly exchange = EXCHANGE_USER_EVENTS;
 
+  /** Timeout de conexão em ms (evita espera indefinida se o broker estiver indisponível). */
+  private static readonly CONNECT_TIMEOUT_MS = 10_000;
+
   constructor(private readonly rabbitmqUrl: string) {}
 
   async connect(): Promise<void> {
-    this.connection = await amqp.connect(this.rabbitmqUrl);
+    this.connection = await amqp.connect(this.rabbitmqUrl, {
+      timeout: RabbitMqEventPublisherAdapter.CONNECT_TIMEOUT_MS,
+    });
     this.channel = await this.connection.createChannel();
     await this.channel.assertExchange(this.exchange, "topic", { durable: true });
   }

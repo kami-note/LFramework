@@ -40,7 +40,7 @@ describe("GetUserByIdUseCase", () => {
       name: "Nome",
       createdAt: "2025-01-01T00:00:00.000Z",
     });
-    expect(cache.get).toHaveBeenCalledWith("user:user-123");
+    expect(cache.get).toHaveBeenCalledWith("user:user-123", expect.anything());
     expect(cache.set).toHaveBeenCalledWith("user:user-123", expect.any(Object), 300);
   });
 
@@ -51,7 +51,7 @@ describe("GetUserByIdUseCase", () => {
     const result = await useCase.execute("inexistente");
 
     expect(result).toBeNull();
-    expect(cache.get).toHaveBeenCalledWith("user:inexistente");
+    expect(cache.get).toHaveBeenCalledWith("user:inexistente", expect.anything());
     expect(cache.set).not.toHaveBeenCalled();
   });
 

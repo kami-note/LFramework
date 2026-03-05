@@ -3,8 +3,9 @@ import type { Request, Response, NextFunction } from "express";
 
 vi.mock("../logger", () => ({
   logger: {
-    child: vi.fn().mockReturnValue({ error: vi.fn() }),
+    child: vi.fn().mockReturnValue({ error: vi.fn(), warn: vi.fn() }),
     error: vi.fn(),
+    warn: vi.fn(),
   },
 }));
 
