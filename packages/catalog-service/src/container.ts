@@ -1,11 +1,10 @@
 import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
 import type { UserCreatedPayload } from "@lframework/shared";
-import { RedisCacheAdapter, createAuthMiddleware } from "@lframework/shared";
+import { RedisCacheAdapter, createAuthMiddleware, JwtTokenVerifier } from "@lframework/shared";
 import { PrismaItemRepository } from "./infrastructure/persistence/prisma-item.repository";
 import { ItemsListCacheInvalidatorAdapter } from "./infrastructure/cache/items-list-cache-invalidator.adapter";
 import { RabbitMqUserEventsAdapter } from "./infrastructure/messaging/rabbitmq-user-events.adapter";
-import { JwtTokenVerifierAdapter } from "./infrastructure/auth/jwt-token-verifier.adapter";
 import { CreateItemUseCase } from "./application/use-cases/create-item.use-case";
 import { ListItemsUseCase } from "./application/use-cases/list-items.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
@@ -36,7 +35,7 @@ export function createContainer(config: {
   const handleUserCreatedUseCase = new HandleUserCreatedUseCase(cache);
 
   const itemController = new ItemController(createItemUseCase, listItemsUseCase);
-  const tokenVerifier = new JwtTokenVerifierAdapter(config.jwtSecret);
+  const tokenVerifier = new JwtTokenVerifier(config.jwtSecret);
   const authMiddleware = createAuthMiddleware((token) => tokenVerifier.verify(token));
   const itemRoutes = createItemRoutes(itemController, authMiddleware);
 

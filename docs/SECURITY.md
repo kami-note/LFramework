@@ -37,7 +37,7 @@ Quem pode acessar o quê está descrito em [API.md](API.md).
 
 ## 3. Secrets e configuração
 
-- Não usar fallbacks com credenciais no código em produção.
+- Não usar fallbacks com credenciais no código em produção. Em produção (`NODE_ENV=production`), as URLs de banco (IDENTITY_DATABASE_URL, CATALOG_DATABASE_URL), Redis (REDIS_URL) e RabbitMQ (RABBITMQ_URL) devem vir **sempre** de variáveis de ambiente; os serviços fazem `process.exit(1)` se alguma estiver ausente e não usam string literal com credenciais.
 - `JWT_SECRET`, connection strings e secrets OAuth vêm de variáveis de ambiente (`.env` não versionado).
 - Em produção, usar secrets manager ou env injetado pelo orchestrator.
 

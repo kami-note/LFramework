@@ -52,7 +52,7 @@ export function createErrorHandlerMiddleware(
       return;
     }
     log.error({ err }, err instanceof Error ? err.message : "Internal server error");
-    res.status(500).json({ error: "Internal server error" });
+    sendError(res, 500, "Internal server error");
   };
 }
 

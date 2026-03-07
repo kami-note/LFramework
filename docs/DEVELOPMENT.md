@@ -58,7 +58,42 @@ Com o gateway no ar, use `http://localhost:8080` e os prefixos `/identity/` e `/
 pnpm test
 ```
 
-Roda Vitest em todos os pacotes (shared, identity, catalog). O shared tem testes próprios em `packages/shared` (middlewares HTTP, sendError, sendValidationError, auth). Identity e catalog testam use cases, DTOs (validação Zod) e controllers.
+Roda Vitest em todos os pacotes (shared, identity, catalog). O shared tem testes próprios em `packages/shared` (middlewares HTTP, sendError, sendValidationError, auth, JwtTokenVerifier). Identity e catalog testam use cases, DTOs (validação Zod) e controllers.
+
+### Auth e middlewares compartilhados
+
+Toda a lógica de **auth** e middlewares HTTP comuns fica em `@lframework/shared` para evitar duplicação entre microserviços:
+
+- **`createAuthMiddleware(verify)`** — valida `Authorization: Bearer <token>`, chama a função `verify(token)` e preenche `req.userId`, `req.userEmail`, `req.userRole`. Use com qualquer implementação de verificação (ex.: `(t) => tokenService.verify(t)` ou `(t) => tokenVerifier.verify(t)`).
+- **`requireRole(role)`** — exige que o usuário autenticado tenha a role indicada; usar após o auth middleware.
+- **`JwtTokenVerifier`** — implementação de `ITokenVerifier` (apenas verificação, HS256). Para serviços que **só validam** token (ex.: catalog), use `new JwtTokenVerifier(JWT_SECRET)` e `createAuthMiddleware((t) => verifier.verify(t))`. O identity-service continua com `JwtTokenService` (sign + verify) para emitir e validar tokens.
+- **Outros**: `requestIdMiddleware`, `createErrorHandlerMiddleware`, `createValidateBody`, `asyncHandler`, `sendError`, `sendValidationError`.
+
+Novos microserviços devem importar esses middlewares e o verifier do shared; não reimplementar auth nem validação de JWT em cada serviço.
+
+### Helpers de mock (Express)
+
+Para reduzir `req as any` e `res as Response` nos testes, use os helpers tipados do shared:
+
+- **`createMockRequest(overrides?)`** — retorna um `Request` com defaults vazios (`headers`, `params`, `query`, `body`); `overrides` são fundidos em cima.
+- **`createMockResponse()`** — retorna um `Response` com `status` (vi.fn().mockReturnThis()), `json`, `setHeader`, `headersSent: false`, etc.
+
+Importe de `@lframework/shared/test` (subpath; não carrega vitest em produção):
+
+```ts
+import { createMockRequest, createMockResponse } from "@lframework/shared/test";
+```
+
+Exemplo em um spec de middleware:
+
+```ts
+const req = createMockRequest({ headers: { "x-request-id": "id-from-client" } });
+const res = createMockResponse();
+const next = vi.fn();
+requestIdMiddleware(req, res, next);
+expect(res.setHeader).toHaveBeenCalledWith("x-request-id", "id-from-client");
+expect(next).toHaveBeenCalled();
+```
 
 ---
 
@@ -113,3 +148,9 @@ Altere `GATEWAY_PORT` no `.env` (ex.: 9080) e suba de novo o stack Docker.
 ### Alterações no nginx.conf
 
 Reinicie o container: `docker compose restart nginx`.
+
+---
+
+## 8. Resiliência (timeouts e retry)
+
+Timeouts e política de retry para Redis, Prisma, RabbitMQ e chamadas HTTP (OAuth) estão documentados em [RESILIENCE.md](RESILIENCE.md).

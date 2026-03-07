@@ -17,3 +17,4 @@ export {
   type AuthenticatedRequest,
 } from "./auth.middleware";
 export type { ITokenVerifier, TokenVerifierPayload } from "./token-verifier.port";
+export { JwtTokenVerifier } from "./jwt-token-verifier";
