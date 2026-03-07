@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
 import { createContainer } from "./container";
+import { createIdentityOpenApi } from "./openapi";
 import {
   requestIdMiddleware,
   createErrorHandlerMiddleware,
@@ -84,6 +86,11 @@ async function bootstrap() {
     );
   }
   app.use(express.json({ limit: "512kb" }));
+
+  const openApiSpec = createIdentityOpenApi(baseUrl);
+  app.get("/api-docs.json", (_req, res) => res.json(openApiSpec));
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiSpec, { customSiteTitle: "Identity Service API" }));
+
   app.use("/api", container.userRoutes);
   app.use("/api", container.authRoutes);
 

@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
 import { createContainer } from "./container";
+import { createCatalogOpenApi } from "./openapi";
 import {
   requestIdMiddleware,
   createErrorHandlerMiddleware,
@@ -43,6 +45,7 @@ const rabbitmqUrl = isProduction
   ? process.env.RABBITMQ_URL!
   : (process.env.RABBITMQ_URL ?? "amqp://lframework:lframework@localhost:5672");
 const jwtSecret = process.env.JWT_SECRET ?? (isProduction ? "" : "dev-secret-min-32-chars-for-jwt-signing");
+const baseUrl = process.env.BASE_URL ?? `http://localhost:${port}`;
 
 async function bootstrap() {
   const container = createContainer({
@@ -68,6 +71,11 @@ async function bootstrap() {
     );
   }
   app.use(express.json({ limit: "512kb" }));
+
+  const openApiSpec = createCatalogOpenApi(baseUrl);
+  app.get("/api-docs.json", (_req, res) => res.json(openApiSpec));
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiSpec, { customSiteTitle: "Catalog Service API" }));
+
   app.use("/api", container.itemRoutes);
 
   app.get("/health", createHealthHandler("catalog-service"));

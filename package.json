@@ -10,7 +10,8 @@
     "test": "pnpm -r run test",
     "dev:identity": "pnpm --filter identity-service run dev",
     "dev:catalog": "pnpm --filter catalog-service run dev",
-    "dev": "pnpm run dev:identity & pnpm run dev:catalog",
+    "dev:api-docs": "pnpm --filter api-docs run dev",
+    "dev": "pnpm run dev:identity & pnpm run dev:catalog & pnpm run dev:api-docs",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down"
   },
