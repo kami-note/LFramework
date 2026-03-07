@@ -5,6 +5,7 @@
   "description": "Exemplo DDD + Microserviços + Hexagonal (TypeScript, PostgreSQL, Redis, RabbitMQ)",
   "scripts": {
     "build": "pnpm -r run build",
+    "lint": "eslint .",
     "test": "pnpm -r run test",
     "dev:identity": "pnpm --filter identity-service run dev",
     "dev:catalog": "pnpm --filter catalog-service run dev",
@@ -15,5 +16,11 @@
   "engines": {
     "node": ">=18"
   },
-  "packageManager": "pnpm@9.0.0"
+  "packageManager": "pnpm@9.0.0",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.3",
+    "glob": "^13.0.6",
+    "typescript-eslint": "^8.56.1"
+  }
 }

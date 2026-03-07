@@ -39,9 +39,11 @@ Cada microserviço em `packages/<nome>-service/` segue a mesma divisão:
 |--------|-------------------|--------------------|
 | **domain/** | Entidades, value objects, interfaces de repositório. Regras de negócio puras. | Implementações (Prisma, HTTP), DTOs, detalhes de infra |
 | **application/** | Use cases (orquestração), portas (interfaces), DTOs de entrada/saída, erros de aplicação. | Conhecimento de HTTP/DB, frameworks |
-| **infrastructure/** | Controllers, repositórios Prisma, adapters RabbitMQ/Redis, middlewares. Tudo que fala com o mundo externo. | Regras de negócio |
+| **infrastructure/adapters/** | Implementações concretas (Adapters) de portas de entrada (in) e saída (out). | Regras de negócio, Use cases |
 
-- **Composition root:** `container.ts` — único ponto onde dependências são montadas (repositórios, use cases, controllers). Nada mais instancia implementações concretas de portas.
+- **Adapters In:** Controllers HTTP (`in/http`), Consumidores de eventos (`in/messaging`).
+- **Adapters Out:** Repositórios Prisma (`out/persistence`), Publishers de eventos (`out/messaging`), Clients de Cache (`out/cache`), Notifiers (`out/notifiers`), Auth Providers (`out/auth`).
+- **Composition root:** `container.ts` — único ponto onde dependências são montadas (adapters + use cases + controllers). Nada mais instancia implementações concretas de portas.
 - **Entry:** `index.ts` — carrega env, cria container, monta Express, listen; em shutdown, desconecta messaging/DB.
 
 ---
