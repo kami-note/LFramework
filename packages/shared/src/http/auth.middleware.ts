@@ -16,6 +16,7 @@ export interface JwtPayload {
  * Em monorepos com um app por processo isso é estável; evite misturar múltiplas apps no mesmo processo.
  */
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- extensão de tipos do Express
   namespace Express {
     interface Request {
       userId?: string;

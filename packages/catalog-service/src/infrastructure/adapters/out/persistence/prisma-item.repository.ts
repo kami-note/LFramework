@@ -1,6 +1,5 @@
 import { PrismaClient } from "../../../../../generated/prisma-client";
 import { Item } from "../../../../domain/entities/item.entity";
-import { Money } from "../../../../domain/value-objects/money.vo";
 import type { IItemRepository } from "../../../../domain/repository-interfaces/item-repository.interface";
 
 export class PrismaItemRepository implements IItemRepository {
