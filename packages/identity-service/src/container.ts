@@ -1,3 +1,4 @@
+import { createContainer as createAwilixContainer, asValue, asClass, asFunction } from "awilix";
 import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
 import { RedisCacheAdapter } from "@lframework/shared";
@@ -12,6 +13,7 @@ import { JwtTokenService } from "./infrastructure/adapters/out/auth/jwt-token.se
 import { Argon2PasswordHasher } from "./infrastructure/adapters/out/auth/argon2-password-hasher";
 import { GoogleOAuthProvider } from "./infrastructure/adapters/out/auth/google-oauth.provider";
 import { GitHubOAuthProvider } from "./infrastructure/adapters/out/auth/github-oauth.provider";
+import type { IOAuthProvider } from "./application/ports/oauth-provider.port";
 import { CreateUserUseCase } from "./application/use-cases/create-user.use-case";
 import { GetUserByIdUseCase } from "./application/use-cases/get-user-by-id.use-case";
 import { RegisterUseCase } from "./application/use-cases/register.use-case";
@@ -36,93 +38,155 @@ export interface ContainerConfig {
   githubOAuth?: { clientId: string; clientSecret: string };
 }
 
+/** Tipo do cradle (dependências resolvidas) para type-safety. */
+interface IdentityCradle {
+  config: ContainerConfig;
+  prisma: PrismaClient;
+  redis: Redis;
+  cache: RedisCacheAdapter;
+  userRepository: PrismaUserRepository;
+  authCredentialRepository: PrismaAuthCredentialRepository;
+  registrationPersistence: PrismaUserRegistrationPersistence;
+  userOAuthRegistrationPersistence: PrismaUserOAuthRegistrationPersistence;
+  oauthAccountRepository: PrismaOAuthAccountRepository;
+  eventPublisher: RabbitMqEventPublisherAdapter;
+  tokenService: JwtTokenService;
+  passwordHasher: Argon2PasswordHasher;
+  googleProvider: IOAuthProvider | null;
+  githubProvider: IOAuthProvider | null;
+  baseUrl: string;
+  jwtExpiresInSeconds: number;
+  userCreatedNotifier: UserCreatedNotifierAdapter;
+  createUserUseCase: CreateUserUseCase;
+  getUserByIdUseCase: GetUserByIdUseCase;
+  registerUseCase: RegisterUseCase;
+  loginUseCase: LoginUseCase;
+  getCurrentUserUseCase: GetCurrentUserUseCase;
+  oauthCallbackUseCase: OAuthCallbackUseCase;
+  userController: UserController;
+  authController: AuthController;
+  authMiddleware: ReturnType<typeof createAuthMiddleware>;
+  userRoutes: ReturnType<typeof createUserRoutes>;
+  authRoutes: ReturnType<typeof createAuthRoutes>;
+}
+
 /**
- * Composição de dependências (container simples).
- * Adicione novos use cases e adapters aqui ao estender o projeto.
+ * Container de DI com Awilix.
+ * Dependências registradas por nome; resolução automática por parâmetros do construtor.
  */
 export function createContainer(config: ContainerConfig) {
-  const prisma = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
-  const redis = new Redis(config.redisUrl, {
-    connectTimeout: 5000,
-    commandTimeout: 5000,
+  const awilix = createAwilixContainer<IdentityCradle>();
+
+  awilix.register({
+    config: asValue(config),
+
+    prisma: asFunction(({ config }: { config: ContainerConfig }) => {
+      return new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
+    }).singleton(),
+
+    redis: asFunction(({ config }: { config: ContainerConfig }) => {
+      return new Redis(config.redisUrl, {
+        connectTimeout: 5000,
+        commandTimeout: 5000,
+      });
+    }).singleton(),
+
+    cache: asClass(RedisCacheAdapter).singleton(),
+    userRepository: asClass(PrismaUserRepository).singleton(),
+    authCredentialRepository: asClass(PrismaAuthCredentialRepository).singleton(),
+    registrationPersistence: asClass(PrismaUserRegistrationPersistence).singleton(),
+    userOAuthRegistrationPersistence: asClass(PrismaUserOAuthRegistrationPersistence).singleton(),
+    oauthAccountRepository: asClass(PrismaOAuthAccountRepository).singleton(),
+
+    eventPublisher: asFunction(
+      ({ config }: { config: ContainerConfig }) =>
+        new RabbitMqEventPublisherAdapter(config.rabbitmqUrl)
+    ).singleton(),
+
+    tokenService: asFunction(({ config }: { config: ContainerConfig }) => {
+      return new JwtTokenService({
+        secret: config.jwtSecret,
+        expiresInSeconds: config.jwtExpiresInSeconds,
+      });
+    }).singleton(),
+
+    passwordHasher: asClass(Argon2PasswordHasher).singleton(),
+
+    googleProvider: asFunction(
+      ({ config }: { config: ContainerConfig }): IOAuthProvider | null =>
+        config.googleOAuth ? new GoogleOAuthProvider(config.googleOAuth) : null
+    ).singleton(),
+
+    githubProvider: asFunction(
+      ({ config }: { config: ContainerConfig }): IOAuthProvider | null =>
+        config.githubOAuth ? new GitHubOAuthProvider(config.githubOAuth) : null
+    ).singleton(),
+
+    baseUrl: asFunction(({ config }: { config: ContainerConfig }) => config.baseUrl).singleton(),
+    jwtExpiresInSeconds: asFunction(
+      ({ config }: { config: ContainerConfig }) => config.jwtExpiresInSeconds
+    ).singleton(),
+
+    userCreatedNotifier: asClass(UserCreatedNotifierAdapter).singleton(),
+    createUserUseCase: asClass(CreateUserUseCase).singleton(),
+    getUserByIdUseCase: asClass(GetUserByIdUseCase).singleton(),
+    registerUseCase: asClass(RegisterUseCase).singleton(),
+    loginUseCase: asClass(LoginUseCase).singleton(),
+    getCurrentUserUseCase: asClass(GetCurrentUserUseCase).singleton(),
+    oauthCallbackUseCase: asClass(OAuthCallbackUseCase).singleton(),
+
+    userController: asClass(UserController).singleton(),
+    authController: asClass(AuthController).singleton(),
+
+    authMiddleware: asFunction(
+      ({ tokenService }: { tokenService: JwtTokenService }) =>
+        createAuthMiddleware((token) => tokenService.verify(token))
+    ).singleton(),
+
+    userRoutes: asFunction(
+      ({
+        userController,
+        authMiddleware,
+      }: {
+        userController: UserController;
+        authMiddleware: ReturnType<typeof createAuthMiddleware>;
+      }) => createUserRoutes(userController, authMiddleware)
+    ).singleton(),
+
+    authRoutes: asFunction(
+      ({
+        authController,
+        authMiddleware,
+      }: {
+        authController: AuthController;
+        authMiddleware: ReturnType<typeof createAuthMiddleware>;
+      }) => createAuthRoutes(authController, authMiddleware)
+    ).singleton(),
   });
-  const eventPublisher = new RabbitMqEventPublisherAdapter(config.rabbitmqUrl);
 
-  const userRepository = new PrismaUserRepository(prisma);
-  const authCredentialRepository = new PrismaAuthCredentialRepository(prisma);
-  const registrationPersistence = new PrismaUserRegistrationPersistence(prisma);
-  const userOAuthRegistrationPersistence = new PrismaUserOAuthRegistrationPersistence(prisma);
-  const oauthAccountRepository = new PrismaOAuthAccountRepository(prisma);
-  const cache = new RedisCacheAdapter(redis);
-
-  const tokenService = new JwtTokenService({
-    secret: config.jwtSecret,
-    expiresInSeconds: config.jwtExpiresInSeconds,
-  });
-  const passwordHasher = new Argon2PasswordHasher();
-
-  const googleProvider = config.googleOAuth
-    ? new GoogleOAuthProvider(config.googleOAuth)
-    : null;
-  const githubProvider = config.githubOAuth
-    ? new GitHubOAuthProvider(config.githubOAuth)
-    : null;
-
-  const userCreatedNotifier = new UserCreatedNotifierAdapter(eventPublisher, cache);
-  const createUserUseCase = new CreateUserUseCase(userRepository, userCreatedNotifier);
-  const getUserByIdUseCase = new GetUserByIdUseCase(userRepository, cache);
-  const registerUseCase = new RegisterUseCase(
-    userRepository,
-    registrationPersistence,
-    passwordHasher,
-    tokenService,
-    userCreatedNotifier
-  );
-  const loginUseCase = new LoginUseCase(
-    userRepository,
-    authCredentialRepository,
-    passwordHasher,
-    tokenService
-  );
-  const getCurrentUserUseCase = new GetCurrentUserUseCase(userRepository);
-  const oauthCallbackUseCase = new OAuthCallbackUseCase(
-    userRepository,
-    oauthAccountRepository,
-    userOAuthRegistrationPersistence,
-    tokenService,
-    userCreatedNotifier
-  );
-
-  const userController = new UserController(createUserUseCase, getUserByIdUseCase);
-  const authController = new AuthController(
-    registerUseCase,
-    loginUseCase,
-    getCurrentUserUseCase,
-    oauthCallbackUseCase,
-    googleProvider,
-    githubProvider,
-    config.baseUrl,
-    cache,
-    config.jwtExpiresInSeconds
-  );
-
-  const authMiddleware = createAuthMiddleware((token) => tokenService.verify(token));
-  const userRoutes = createUserRoutes(userController, authMiddleware);
-  const authRoutes = createAuthRoutes(authController, authMiddleware);
+  const c = awilix.cradle;
 
   return {
-    prisma,
-    redis,
-    userRoutes,
-    authRoutes,
+    get prisma() {
+      return c.prisma;
+    },
+    get redis() {
+      return c.redis;
+    },
+    get userRoutes() {
+      return c.userRoutes;
+    },
+    get authRoutes() {
+      return c.authRoutes;
+    },
     mapApplicationErrorToHttp,
     async connectRabbitMQ(): Promise<void> {
-      await eventPublisher.connect();
+      await c.eventPublisher.connect();
     },
     async disconnect(): Promise<void> {
-      await eventPublisher.disconnect();
-      await prisma.$disconnect();
-      redis.disconnect();
+      await c.eventPublisher.disconnect();
+      await c.prisma.$disconnect();
+      c.redis.disconnect();
     },
   };
 }

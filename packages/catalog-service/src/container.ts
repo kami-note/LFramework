@@ -1,3 +1,4 @@
+import { createContainer as createAwilixContainer, asValue, asClass, asFunction } from "awilix";
 import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
 import type { UserCreatedPayload } from "@lframework/shared";
@@ -12,49 +13,113 @@ import { ItemController } from "./infrastructure/adapters/in/http/item.controlle
 import { createItemRoutes } from "./infrastructure/adapters/in/http/routes";
 import { mapApplicationErrorToHttp } from "./infrastructure/adapters/in/http/error-to-http.mapper";
 
-export function createContainer(config: {
+export interface CatalogContainerConfig {
   databaseUrl: string;
   redisUrl: string;
   rabbitmqUrl: string;
   jwtSecret: string;
-}) {
-  const prisma = new PrismaClient({
-    datasources: { db: { url: config.databaseUrl } },
+}
+
+/** Tipo do cradle (dependências resolvidas) para type-safety. */
+interface CatalogCradle {
+  config: CatalogContainerConfig;
+  prisma: PrismaClient;
+  redis: Redis;
+  cache: RedisCacheAdapter;
+  itemRepository: PrismaItemRepository;
+  itemsListCacheInvalidator: ItemsListCacheInvalidatorAdapter;
+  createItemUseCase: CreateItemUseCase;
+  listItemsUseCase: ListItemsUseCase;
+  handleUserCreatedUseCase: HandleUserCreatedUseCase;
+  itemController: ItemController;
+  tokenVerifier: JwtTokenVerifier;
+  authMiddleware: ReturnType<typeof createAuthMiddleware>;
+  itemRoutes: ReturnType<typeof createItemRoutes>;
+  eventConsumer: RabbitMqUserEventsAdapter;
+}
+
+/**
+ * Container de DI com Awilix.
+ * Dependências registradas por nome; resolução automática por parâmetros do construtor.
+ */
+export function createContainer(config: CatalogContainerConfig) {
+  const awilix = createAwilixContainer<CatalogCradle>();
+
+  awilix.register({
+    config: asValue(config),
+
+    prisma: asFunction(({ config }: { config: CatalogContainerConfig }) => {
+      return new PrismaClient({
+        datasources: { db: { url: config.databaseUrl } },
+      });
+    }).singleton(),
+
+    redis: asFunction(({ config }: { config: CatalogContainerConfig }) => {
+      return new Redis(config.redisUrl, {
+        connectTimeout: 5000,
+        commandTimeout: 5000,
+      });
+    }).singleton(),
+
+    cache: asClass(RedisCacheAdapter).singleton(),
+    itemRepository: asClass(PrismaItemRepository).singleton(),
+    itemsListCacheInvalidator: asClass(ItemsListCacheInvalidatorAdapter).singleton(),
+
+    createItemUseCase: asClass(CreateItemUseCase).singleton(),
+    listItemsUseCase: asClass(ListItemsUseCase).singleton(),
+    handleUserCreatedUseCase: asClass(HandleUserCreatedUseCase).singleton(),
+
+    itemController: asClass(ItemController).singleton(),
+
+    tokenVerifier: asFunction(({ config }: { config: CatalogContainerConfig }) => {
+      return new JwtTokenVerifier(config.jwtSecret);
+    }).singleton(),
+
+    authMiddleware: asFunction(
+      ({ tokenVerifier }: { tokenVerifier: JwtTokenVerifier }) =>
+        createAuthMiddleware((token) => tokenVerifier.verify(token))
+    ).singleton(),
+
+    itemRoutes: asFunction(
+      ({
+        itemController,
+        authMiddleware,
+      }: {
+        itemController: ItemController;
+        authMiddleware: ReturnType<typeof createAuthMiddleware>;
+      }) => createItemRoutes(itemController, authMiddleware)
+    ).singleton(),
+
+    eventConsumer: asFunction(
+      ({ config }: { config: CatalogContainerConfig }) =>
+        new RabbitMqUserEventsAdapter(config.rabbitmqUrl)
+    ).singleton(),
   });
-  const redis = new Redis(config.redisUrl, {
-    connectTimeout: 5000,
-    commandTimeout: 5000,
-  });
 
-  const itemRepository = new PrismaItemRepository(prisma);
-  const cache = new RedisCacheAdapter(redis);
-  const itemsListCacheInvalidator = new ItemsListCacheInvalidatorAdapter(cache);
-
-  const createItemUseCase = new CreateItemUseCase(itemRepository, itemsListCacheInvalidator);
-  const listItemsUseCase = new ListItemsUseCase(itemRepository, cache);
-  const handleUserCreatedUseCase = new HandleUserCreatedUseCase(cache);
-
-  const itemController = new ItemController(createItemUseCase, listItemsUseCase);
-  const tokenVerifier = new JwtTokenVerifier(config.jwtSecret);
-  const authMiddleware = createAuthMiddleware((token) => tokenVerifier.verify(token));
-  const itemRoutes = createItemRoutes(itemController, authMiddleware);
-
-  const eventConsumer: RabbitMqUserEventsAdapter = new RabbitMqUserEventsAdapter(config.rabbitmqUrl);
+  const c = awilix.cradle;
 
   return {
-    prisma,
-    redis,
-    itemRoutes,
+    get prisma() {
+      return c.prisma;
+    },
+    get redis() {
+      return c.redis;
+    },
+    get itemRoutes() {
+      return c.itemRoutes;
+    },
     mapApplicationErrorToHttp,
-    handleUserCreatedUseCase,
+    get handleUserCreatedUseCase() {
+      return c.handleUserCreatedUseCase;
+    },
     async connectRabbitMQ(userCreatedHandler: (payload: UserCreatedPayload) => Promise<void>): Promise<void> {
-      eventConsumer.onUserCreated(userCreatedHandler);
-      await eventConsumer.start();
+      c.eventConsumer.onUserCreated(userCreatedHandler);
+      await c.eventConsumer.start();
     },
     async disconnect(): Promise<void> {
-      await eventConsumer.close();
-      await prisma.$disconnect();
-      redis.disconnect();
+      await c.eventConsumer.close();
+      await c.prisma.$disconnect();
+      c.redis.disconnect();
     },
   };
 }
