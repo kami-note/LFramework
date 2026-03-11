@@ -10,6 +10,7 @@ import {
 } from "../../../application/errors";
 import { mapApplicationErrorToHttp } from "./error-to-http.mapper";
 import { sendError } from "@lframework/shared";
+import { createMockAuthenticatedRequest } from "@lframework/shared/test";
 
 describe("UserController", () => {
   let createUserUseCase: CreateUserUseCase;
@@ -41,7 +42,7 @@ describe("UserController", () => {
       vi.mocked(createUserUseCase.execute).mockResolvedValue(created);
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { body: { email: "u@example.com", name: "Nome" }, userId: "admin-1", userRole: "admin" } as any;
+      const req = createMockAuthenticatedRequest({ body: { email: "u@example.com", name: "Nome" }, userId: "admin-1", userRole: "admin" });
       await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
@@ -54,7 +55,7 @@ describe("UserController", () => {
       );
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { body: { email: "existente@example.com", name: "X" }, userId: "a", userRole: "admin" } as any;
+      const req = createMockAuthenticatedRequest({ body: { email: "existente@example.com", name: "X" }, userId: "a", userRole: "admin" });
       await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(409);
@@ -65,7 +66,7 @@ describe("UserController", () => {
       vi.mocked(createUserUseCase.execute).mockRejectedValue(new InvalidEmailError("Invalid email"));
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { body: { email: "invalido", name: "X" }, userId: "a", userRole: "admin" } as any;
+      const req = createMockAuthenticatedRequest({ body: { email: "invalido", name: "X" }, userId: "a", userRole: "admin" });
       await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -76,7 +77,7 @@ describe("UserController", () => {
       vi.mocked(createUserUseCase.execute).mockRejectedValue(new Error("DB error"));
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { body: { email: "u@example.com", name: "X" }, userId: "a", userRole: "admin" } as any;
+      const req = createMockAuthenticatedRequest({ body: { email: "u@example.com", name: "X" }, userId: "a", userRole: "admin" });
       await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(500);
@@ -99,7 +100,7 @@ describe("UserController", () => {
       vi.mocked(getUserByIdUseCase.execute).mockResolvedValue(user);
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { params: { id: uuidOwner }, userId: uuidOwner, userRole: "user" } as any;
+      const req = createMockAuthenticatedRequest({ params: { id: uuidOwner }, userId: uuidOwner, userRole: "user" });
       await controller.getById(req, res as Response, next);
 
       expect(res.json).toHaveBeenCalledWith(user);
@@ -108,7 +109,7 @@ describe("UserController", () => {
 
     it("deve retornar 400 quando id não é UUID", async () => {
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { params: { id: "nao-uuid" }, userId: uuidOwner, userRole: "user" } as any;
+      const req = createMockAuthenticatedRequest({ params: { id: "nao-uuid" }, userId: uuidOwner, userRole: "user" });
       await controller.getById(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -118,7 +119,7 @@ describe("UserController", () => {
 
     it("deve retornar 403 quando requester não é o dono nem admin", async () => {
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { params: { id: uuidOther }, userId: uuidOwner, userRole: "user" } as any;
+      const req = createMockAuthenticatedRequest({ params: { id: uuidOther }, userId: uuidOwner, userRole: "user" });
       await controller.getById(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(403);
@@ -131,7 +132,7 @@ describe("UserController", () => {
       vi.mocked(getUserByIdUseCase.execute).mockResolvedValue(user);
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { params: { id: uuidOther }, userId: uuidAdmin, userRole: "admin" } as any;
+      const req = createMockAuthenticatedRequest({ params: { id: uuidOther }, userId: uuidAdmin, userRole: "admin" });
       await controller.getById(req, res as Response, next);
 
       expect(res.json).toHaveBeenCalledWith(user);
@@ -142,7 +143,7 @@ describe("UserController", () => {
       vi.mocked(getUserByIdUseCase.execute).mockResolvedValue(null);
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { params: { id: uuidOwner }, userId: uuidOwner, userRole: "user" } as any;
+      const req = createMockAuthenticatedRequest({ params: { id: uuidOwner }, userId: uuidOwner, userRole: "user" });
       await controller.getById(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(404);
@@ -153,7 +154,7 @@ describe("UserController", () => {
       vi.mocked(getUserByIdUseCase.execute).mockRejectedValue(new Error("DB error"));
 
       const controller = new UserController(createUserUseCase, getUserByIdUseCase);
-      const req = { params: { id: uuidOwner }, userId: uuidOwner, userRole: "user" } as any;
+      const req = createMockAuthenticatedRequest({ params: { id: uuidOwner }, userId: uuidOwner, userRole: "user" });
       await controller.getById(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(500);

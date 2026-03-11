@@ -38,7 +38,7 @@ describe("errorHandlerMiddleware", () => {
   });
 
   it("não deve chamar res.status/json quando headersSent for true", () => {
-    (res as any).headersSent = true;
+    res.headersSent = true;
 
     errorHandlerMiddleware(new Error("x"), req as Request, res as Response, next);
 

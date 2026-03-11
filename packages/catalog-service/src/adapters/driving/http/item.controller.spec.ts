@@ -7,6 +7,7 @@ import type { NextFunction } from "express";
 import { InvalidItemError } from "../../../application/errors";
 import { mapApplicationErrorToHttp } from "./error-to-http.mapper";
 import { sendError } from "@lframework/shared";
+import { createMockRequest, createMockAuthenticatedRequest } from "@lframework/shared/test";
 
 describe("ItemController", () => {
   let createItemUseCase: CreateItemUseCase;
@@ -48,7 +49,7 @@ describe("ItemController", () => {
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      await controller.list({} as any, res as Response, next);
+      await controller.list(createMockRequest(), res as Response, next);
 
       expect(res.json).toHaveBeenCalledWith(items);
       expect(listItemsUseCase.execute).toHaveBeenCalledTimes(1);
@@ -61,7 +62,7 @@ describe("ItemController", () => {
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      await controller.list({} as any, res as Response, next);
+      await controller.list(createMockRequest(), res as Response, next);
 
       expect(res.json).toHaveBeenCalledWith([]);
     });
@@ -73,7 +74,7 @@ describe("ItemController", () => {
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      await controller.list({} as any, res as Response, next);
+      await controller.list(createMockRequest(), res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
@@ -95,7 +96,7 @@ describe("ItemController", () => {
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      const req = { body: { name: "Produto", priceAmount: 9999, priceCurrency: "BRL" }, userId: "user-1" } as any;
+      const req = createMockAuthenticatedRequest({ body: { name: "Produto", priceAmount: 9999, priceCurrency: "BRL" }, userId: "user-1" });
       await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
@@ -116,7 +117,7 @@ describe("ItemController", () => {
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      const req = { body: { name: "X", priceAmount: -1, priceCurrency: "BRL" }, userId: "user-1" } as any;
+      const req = createMockAuthenticatedRequest({ body: { name: "X", priceAmount: -1, priceCurrency: "BRL" }, userId: "user-1" });
       await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -130,7 +131,7 @@ describe("ItemController", () => {
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      const req = { body: { name: "X", priceAmount: 100, priceCurrency: "BRL" }, userId: "user-1" } as any;
+      const req = createMockAuthenticatedRequest({ body: { name: "X", priceAmount: 100, priceCurrency: "BRL" }, userId: "user-1" });
       await controller.create(req, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(500);

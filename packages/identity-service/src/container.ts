@@ -1,13 +1,14 @@
 import { createContainer as createAwilixContainer, asValue, asClass, asFunction } from "awilix";
 import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
-import { RedisCacheAdapter } from "@lframework/shared";
+import { RedisCacheAdapter, type ICacheService } from "@lframework/shared";
 import { PrismaUserRepository } from "./adapters/driven/persistence/prisma-user.repository";
 import { PrismaAuthCredentialRepository } from "./adapters/driven/persistence/prisma-auth-credential.repository";
 import { PrismaUserRegistrationPersistence } from "./adapters/driven/persistence/prisma-user-registration.repository";
 import { PrismaUserOAuthRegistrationPersistence } from "./adapters/driven/persistence/prisma-user-oauth-registration.repository";
 import { PrismaOAuthAccountRepository } from "./adapters/driven/persistence/prisma-oauth-account.repository";
 import { RabbitMqEventPublisherAdapter } from "./adapters/driven/messaging/rabbitmq-event-publisher.adapter";
+import type { IEventPublisher } from "./application/ports/event-publisher.port";
 import { UserCreatedNotifierAdapter } from "./adapters/driven/notifiers/user-created-notifier.adapter";
 import { JwtTokenService } from "./adapters/driven/auth/jwt-token.service";
 import { Argon2PasswordHasher } from "./adapters/driven/auth/argon2-password-hasher";
@@ -27,6 +28,12 @@ import { createUserRoutes } from "./adapters/driving/http/routes";
 import { createAuthRoutes } from "./adapters/driving/http/auth.routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
 
+/** Optional event publisher for tests (no-op connect/disconnect). When set, RabbitMQ is not used. */
+export type TestEventPublisher = IEventPublisher & {
+  connect?: () => Promise<void>;
+  disconnect?: () => Promise<void>;
+};
+
 export interface ContainerConfig {
   databaseUrl: string;
   redisUrl: string;
@@ -36,6 +43,10 @@ export interface ContainerConfig {
   baseUrl: string;
   googleOAuth?: { clientId: string; clientSecret: string };
   githubOAuth?: { clientId: string; clientSecret: string };
+  /** When set, used instead of RabbitMQ (e.g. no-op in integration tests). */
+  eventPublisherOverride?: TestEventPublisher;
+  /** When set, used instead of Redis cache (e.g. no-op in integration tests). */
+  cacheOverride?: ICacheService;
 }
 
 /** Tipo do cradle (dependências resolvidas) para type-safety. */
@@ -49,7 +60,7 @@ interface IdentityCradle {
   registrationPersistence: PrismaUserRegistrationPersistence;
   userOAuthRegistrationPersistence: PrismaUserOAuthRegistrationPersistence;
   oauthAccountRepository: PrismaOAuthAccountRepository;
-  eventPublisher: RabbitMqEventPublisherAdapter;
+  eventPublisher: IEventPublisher & { connect?: () => Promise<void>; disconnect?: () => Promise<void> };
   tokenService: JwtTokenService;
   passwordHasher: Argon2PasswordHasher;
   googleProvider: IOAuthProvider | null;
@@ -91,16 +102,33 @@ export function createContainer(config: ContainerConfig) {
       });
     }).singleton(),
 
-    cache: asClass(RedisCacheAdapter).singleton(),
-    userRepository: asClass(PrismaUserRepository).singleton(),
-    authCredentialRepository: asClass(PrismaAuthCredentialRepository).singleton(),
-    registrationPersistence: asClass(PrismaUserRegistrationPersistence).singleton(),
-    userOAuthRegistrationPersistence: asClass(PrismaUserOAuthRegistrationPersistence).singleton(),
-    oauthAccountRepository: asClass(PrismaOAuthAccountRepository).singleton(),
+    cache: asFunction(
+    ({ config, redis }: { config: ContainerConfig; redis: Redis }) =>
+      config.cacheOverride ?? new RedisCacheAdapter(redis)
+  ).singleton(),
+    userRepository: asFunction(
+      (cradle: IdentityCradle) => new PrismaUserRepository(cradle.prisma)
+    ).singleton(),
+    authCredentialRepository: asFunction(
+      (cradle: IdentityCradle) =>
+        new PrismaAuthCredentialRepository(cradle.prisma)
+    ).singleton(),
+    registrationPersistence: asFunction(
+      (cradle: IdentityCradle) =>
+        new PrismaUserRegistrationPersistence(cradle.prisma)
+    ).singleton(),
+    userOAuthRegistrationPersistence: asFunction(
+      (cradle: IdentityCradle) =>
+        new PrismaUserOAuthRegistrationPersistence(cradle.prisma)
+    ).singleton(),
+    oauthAccountRepository: asFunction(
+      (cradle: IdentityCradle) =>
+        new PrismaOAuthAccountRepository(cradle.prisma)
+    ).singleton(),
 
     eventPublisher: asFunction(
       ({ config }: { config: ContainerConfig }) =>
-        new RabbitMqEventPublisherAdapter(config.rabbitmqUrl)
+        config.eventPublisherOverride ?? new RabbitMqEventPublisherAdapter(config.rabbitmqUrl)
     ).singleton(),
 
     tokenService: asFunction(({ config }: { config: ContainerConfig }) => {
@@ -127,16 +155,77 @@ export function createContainer(config: ContainerConfig) {
       ({ config }: { config: ContainerConfig }) => config.jwtExpiresInSeconds
     ).singleton(),
 
-    userCreatedNotifier: asClass(UserCreatedNotifierAdapter).singleton(),
-    createUserUseCase: asClass(CreateUserUseCase).singleton(),
-    getUserByIdUseCase: asClass(GetUserByIdUseCase).singleton(),
-    registerUseCase: asClass(RegisterUseCase).singleton(),
-    loginUseCase: asClass(LoginUseCase).singleton(),
-    getCurrentUserUseCase: asClass(GetCurrentUserUseCase).singleton(),
-    oauthCallbackUseCase: asClass(OAuthCallbackUseCase).singleton(),
+    userCreatedNotifier: asFunction(
+      (cradle: IdentityCradle) =>
+        new UserCreatedNotifierAdapter(cradle.eventPublisher, cradle.cache)
+    ).singleton(),
 
-    userController: asClass(UserController).singleton(),
-    authController: asClass(AuthController).singleton(),
+    createUserUseCase: asFunction(
+      (cradle: IdentityCradle) =>
+        new CreateUserUseCase(cradle.userRepository, cradle.userCreatedNotifier)
+    ).singleton(),
+
+    getUserByIdUseCase: asFunction(
+      (cradle: IdentityCradle) =>
+        new GetUserByIdUseCase(cradle.userRepository, cradle.cache)
+    ).singleton(),
+
+    registerUseCase: asFunction(
+      (cradle: IdentityCradle) =>
+        new RegisterUseCase(
+          cradle.userRepository,
+          cradle.registrationPersistence,
+          cradle.passwordHasher,
+          cradle.tokenService,
+          cradle.userCreatedNotifier
+        )
+    ).singleton(),
+
+    loginUseCase: asFunction(
+      (cradle: IdentityCradle) =>
+        new LoginUseCase(
+          cradle.userRepository,
+          cradle.authCredentialRepository,
+          cradle.passwordHasher,
+          cradle.tokenService
+        )
+    ).singleton(),
+
+    getCurrentUserUseCase: asFunction(
+      (cradle: IdentityCradle) =>
+        new GetCurrentUserUseCase(cradle.userRepository)
+    ).singleton(),
+
+    oauthCallbackUseCase: asFunction(
+      (cradle: IdentityCradle) =>
+        new OAuthCallbackUseCase(
+          cradle.userRepository,
+          cradle.oauthAccountRepository,
+          cradle.userOAuthRegistrationPersistence,
+          cradle.tokenService,
+          cradle.userCreatedNotifier
+        )
+    ).singleton(),
+
+    userController: asFunction(
+      (cradle: IdentityCradle) =>
+        new UserController(cradle.createUserUseCase, cradle.getUserByIdUseCase)
+    ).singleton(),
+
+    authController: asFunction(
+      (cradle: IdentityCradle) =>
+        new AuthController(
+          cradle.registerUseCase,
+          cradle.loginUseCase,
+          cradle.getCurrentUserUseCase,
+          cradle.oauthCallbackUseCase,
+          cradle.googleProvider,
+          cradle.githubProvider,
+          cradle.baseUrl,
+          cradle.cache,
+          cradle.jwtExpiresInSeconds
+        )
+    ).singleton(),
 
     authMiddleware: asFunction(
       ({ tokenService }: { tokenService: JwtTokenService }) =>
@@ -181,10 +270,12 @@ export function createContainer(config: ContainerConfig) {
     },
     mapApplicationErrorToHttp,
     async connectRabbitMQ(): Promise<void> {
-      await c.eventPublisher.connect();
+      const ep = c.eventPublisher as { connect?: () => Promise<void> };
+      if (ep.connect) await ep.connect();
     },
     async disconnect(): Promise<void> {
-      await c.eventPublisher.disconnect();
+      const ep = c.eventPublisher as { disconnect?: () => Promise<void> };
+      if (ep.disconnect) await ep.disconnect();
       await c.prisma.$disconnect();
       c.redis.disconnect();
     },

@@ -37,6 +37,13 @@ export function createErrorHandlerMiddleware(
         } else {
           statusCode = mapping.statusCode;
           message = mapping.message;
+          if (
+            statusCode >= 500 &&
+            process.env.NODE_ENV === "test" &&
+            err instanceof Error
+          ) {
+            message = err.message;
+          }
         }
       } catch (mapperErr) {
         log.error({ err, mapperError: mapperErr }, "Error handler mapper threw");

@@ -38,6 +38,7 @@ Cada serviço segue **hexagonal + DDD**: `domain/`, `application/`, `infrastruct
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Como rodar, testes, env, troubleshooting |
 | [docs/SECURITY.md](docs/SECURITY.md) | Validação, limites, OWASP, boas práticas |
 | [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md) | Code review consolidado, problemas por severidade, recomendações |
+| [docs/TECHNICAL_REVIEW.md](docs/TECHNICAL_REVIEW.md) | Revisão técnica do estado atual, paths e itens resolvidos |
 | [docs/RESILIENCE.md](docs/RESILIENCE.md) | Timeouts, retries e política de resiliência |
 
 ## Como rodar

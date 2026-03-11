@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CreateUserUseCase } from "./create-user.use-case";
 import { UserAlreadyExistsError, InvalidEmailError } from "../errors";
 import { User } from "../../domain/entities/user.entity";
-import { Email } from "../../domain/value-objects/email.vo";
 import type { IUserRepository } from "../ports/user-repository.port";
 import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";
 

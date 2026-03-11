@@ -6,6 +6,7 @@ import type { Response } from "express";
 import type { NextFunction } from "express";
 import { mapApplicationErrorToHttp } from "./error-to-http.mapper";
 import { sendError } from "@lframework/shared";
+import { createMockRequest, createMockAuthenticatedRequest } from "@lframework/shared/test";
 
 describe("ItemController — cenários absurdos", () => {
   let createItemUseCase: CreateItemUseCase;
@@ -28,12 +29,12 @@ describe("ItemController — cenários absurdos", () => {
 
   describe("list", () => {
     it("não explode quando use case retorna null (comportamento inesperado)", async () => {
-      vi.mocked(listItemsUseCase.execute).mockResolvedValue(null as any);
+      vi.mocked(listItemsUseCase.execute).mockResolvedValue(null as unknown as Awaited<ReturnType<ListItemsUseCase["execute"]>>);
       const controller = new ItemController(
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      await controller.list({} as any, res as Response, next);
+      await controller.list(createMockRequest(), res as Response, next);
       expect(res.json).toHaveBeenCalledWith(null);
     });
 
@@ -43,7 +44,7 @@ describe("ItemController — cenários absurdos", () => {
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      await controller.list({} as any, res as Response, next);
+      await controller.list(createMockRequest(), res as Response, next);
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
     });
@@ -56,7 +57,7 @@ describe("ItemController — cenários absurdos", () => {
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      const req = { body: {}, userId: "user-1" } as any;
+      const req = createMockAuthenticatedRequest({ body: {}, userId: "user-1" });
       await controller.create(req, res as Response, next);
       expect(createItemUseCase.execute).toHaveBeenCalledWith({});
     });
@@ -67,7 +68,7 @@ describe("ItemController — cenários absurdos", () => {
         createItemUseCase as CreateItemUseCase,
         listItemsUseCase as ListItemsUseCase
       );
-      const req = { body: { name: "X", priceAmount: 1 }, userId: "user-1" } as any;
+      const req = createMockAuthenticatedRequest({ body: { name: "X", priceAmount: 1 }, userId: "user-1" });
       await controller.create(req, res as Response, next);
       expect(res.status).toHaveBeenCalledWith(500);
     });

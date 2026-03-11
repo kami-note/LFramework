@@ -1,14 +1,6 @@
-import express from "express";
-import cors from "cors";
-import swaggerUi from "swagger-ui-express";
 import { createContainer } from "./container";
-import { createIdentityOpenApi } from "./openapi";
-import {
-  requestIdMiddleware,
-  createErrorHandlerMiddleware,
-  createHealthHandler,
-  logger,
-} from "@lframework/shared";
+import { createApp } from "./app";
+import { logger } from "@lframework/shared";
 
 const port = parseInt(process.env.IDENTITY_SERVICE_PORT ?? "3001", 10);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -74,29 +66,10 @@ async function bootstrap() {
 
   await container.connectRabbitMQ();
 
-  const app = express();
-  app.use(requestIdMiddleware);
-  const corsOrigin = process.env.CORS_ORIGIN;
-  if (corsOrigin) {
-    app.use(
-      cors({
-        origin: corsOrigin.split(",").map((s) => s.trim()),
-        credentials: true,
-      })
-    );
-  }
-  app.use(express.json({ limit: "512kb" }));
-
-  const openApiSpec = createIdentityOpenApi(baseUrl);
-  app.get("/api-docs.json", (_req, res) => res.json(openApiSpec));
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiSpec, { customSiteTitle: "Identity Service API" }));
-
-  app.use("/api", container.userRoutes);
-  app.use("/api", container.authRoutes);
-
-  app.get("/health", createHealthHandler("identity-service"));
-
-  app.use(createErrorHandlerMiddleware(container.mapApplicationErrorToHttp));
+  const app = createApp(container, {
+    corsOrigin: process.env.CORS_ORIGIN,
+    baseUrl,
+  });
 
   app.listen(port, () => {
     logger.info(`Identity service listening on http://localhost:${port}`);
