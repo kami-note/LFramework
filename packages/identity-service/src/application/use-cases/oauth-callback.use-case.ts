@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
 import { User } from "../../domain/entities/user.entity";
 import { Email } from "../../domain/value-objects/email.vo";
-import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
-import type { IOAuthAccountRepository } from "../../domain/repository-interfaces/oauth-account-repository.interface";
-import type { IUserOAuthRegistrationPersistence } from "../../domain/repository-interfaces/user-oauth-registration-persistence.interface";
+import type { IUserRepository } from "../ports/user-repository.port";
+import type { IOAuthAccountRepository } from "../ports/oauth-account-repository.port";
+import type { IUserOAuthRegistrationPersistence } from "../ports/user-oauth-registration-persistence.port";
 import type { IOAuthProvider } from "../ports/oauth-provider.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";

@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { Item } from "../../domain/entities/item.entity";
 import { Money } from "../../domain/value-objects/money.vo";
-import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
+import type { IItemRepository } from "../ports/item-repository.port";
 import type { IItemsListCacheInvalidator } from "../ports/items-list-cache-invalidator.port";
 import type { CreateItemDto } from "../dtos/create-item.dto";
 import type { ItemResponseDto } from "../dtos/item-response.dto";

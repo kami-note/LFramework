@@ -1,5 +1,5 @@
-import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
-import type { IAuthCredentialRepository } from "../../domain/repository-interfaces/auth-credential-repository.interface";
+import type { IUserRepository } from "../ports/user-repository.port";
+import type { IAuthCredentialRepository } from "../ports/auth-credential-repository.port";
 import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { LoginDto } from "../dtos/login.dto";

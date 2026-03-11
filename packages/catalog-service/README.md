@@ -19,10 +19,10 @@ pnpm run dev   # http://localhost:3002
 pnpm test      # Vitest (use cases, DTOs)
 ```
 
-## Camadas (Hexagonal + DDD)
+## Layers (Hexagonal + DDD)
 
-- **domain/** — Entidade Item, eventos de domínio
-- **application/** — Use cases (list/create/update/delete items), DTOs, ports (repositório, cache, invalidator)
-- **infrastructure/** — HTTP (Express), Prisma, Redis, RabbitMQ consumer
+- **domain/** — Item entity, value objects, domain types (no I/O interfaces)
+- **application/** — Use cases (list/create items, handle-user-created), all ports (repository, cache invalidator, event consumer), DTOs
+- **adapters/** — Driving: HTTP (Express), RabbitMQ consumer. Driven: Prisma, Redis cache invalidator
 
 Ver [README raiz](../../README.md) e [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md).

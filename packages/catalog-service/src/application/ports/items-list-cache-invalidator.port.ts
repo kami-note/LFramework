@@ -1,6 +1,6 @@
 /**
  * Porta: invalidação do cache da lista de itens.
- * CreateItemUseCase depende desta abstração (DIP); a implementação fica em infrastructure.
+ * CreateItemUseCase depends on this abstraction (DIP); the implementation lives in adapters/driven.
  */
 export interface IItemsListCacheInvalidator {
   invalidate(): Promise<void>;

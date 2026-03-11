@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { User } from "../../domain/entities/user.entity";
 import { Email } from "../../domain/value-objects/email.vo";
-import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
+import type { IUserRepository } from "../ports/user-repository.port";
 import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";
 import type { CreateUserDto } from "../dtos/create-user.dto";
 import type { UserResponseDto } from "../dtos/user-response.dto";

@@ -31,20 +31,20 @@ O shared é o **núcleo do framework**. Contém o que vários serviços ou o eco
 
 ---
 
-## 3. Camadas (hexagonal + DDD)
+## 3. Layers (Hexagonal + DDD)
 
-Cada microserviço em `packages/<nome>-service/` segue a mesma divisão:
+Each microservice in `packages/<name>-service/` follows the same division:
 
-| Camada | Responsabilidade | O que não colocar |
-|--------|-------------------|--------------------|
-| **domain/** | Entidades, value objects, interfaces de repositório. Regras de negócio puras. | Implementações (Prisma, HTTP), DTOs, detalhes de infra |
-| **application/** | Use cases (orquestração), portas (interfaces), DTOs de entrada/saída, erros de aplicação. | Conhecimento de HTTP/DB, frameworks |
-| **infrastructure/adapters/** | Implementações concretas (Adapters) de portas de entrada (in) e saída (out). | Regras de negócio, Use cases |
+| Layer | Responsibility | What not to put there |
+|-------|----------------|------------------------|
+| **domain/** | Entities, value objects, domain types. Pure business rules. No I/O interfaces. | Implementations (Prisma, HTTP), DTOs, repository interfaces, infra details |
+| **application/** | Use cases (orchestration), **all ports** (repository ports + other driven ports), DTOs, application errors. | Knowledge of HTTP/DB, frameworks, concrete adapters |
+| **adapters/** | Concrete implementations. **Driving** = call into the app (HTTP, consumers). **Driven** = implement application ports (persistence, messaging, cache, auth). | Business rules, use cases |
 
-- **Adapters In:** Controllers HTTP (`in/http`), Consumidores de eventos (`in/messaging`).
-- **Adapters Out:** Repositórios Prisma (`out/persistence`), Publishers de eventos (`out/messaging`), Clients de Cache (`out/cache`), Notifiers (`out/notifiers`), Auth Providers (`out/auth`).
-- **Composition root:** `container.ts` — único ponto onde dependências são montadas (adapters + use cases + controllers). Nada mais instancia implementações concretas de portas.
-- **Entry:** `index.ts` — carrega env, cria container, monta Express, listen; em shutdown, desconecta messaging/DB.
+- **Driving adapters:** HTTP controllers (`adapters/driving/http`), event consumers (`adapters/driving/messaging`). They call use cases.
+- **Driven adapters:** Prisma repositories (`adapters/driven/persistence`), event publishers (`adapters/driven/messaging`), cache (`adapters/driven/cache`), notifiers (`adapters/driven/notifiers`), auth (`adapters/driven/auth`). They implement ports defined in `application/ports/`.
+- **Composition root:** `container.ts` — single place where dependencies are wired (adapters + use cases + controllers). Nothing else instantiates concrete port implementations.
+- **Entry:** `index.ts` — loads env, creates container, mounts Express, listen; on shutdown, disconnects messaging/DB.
 
 ---
 

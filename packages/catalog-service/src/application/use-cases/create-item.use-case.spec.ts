@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CreateItemUseCase } from "./create-item.use-case";
 import { InvalidItemError } from "../errors";
-import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
+import type { IItemRepository } from "../../ports/item-repository.port";
 import type { IItemsListCacheInvalidator } from "../ports/items-list-cache-invalidator.port";
 
 describe("CreateItemUseCase", () => {

@@ -3,15 +3,15 @@ import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
 import type { UserCreatedPayload } from "@lframework/shared";
 import { RedisCacheAdapter, createAuthMiddleware, JwtTokenVerifier } from "@lframework/shared";
-import { PrismaItemRepository } from "./infrastructure/adapters/out/persistence/prisma-item.repository";
-import { ItemsListCacheInvalidatorAdapter } from "./infrastructure/adapters/out/cache/items-list-cache-invalidator.adapter";
-import { RabbitMqUserEventsAdapter } from "./infrastructure/adapters/in/messaging/rabbitmq-user-events.adapter";
+import { PrismaItemRepository } from "./adapters/driven/persistence/prisma-item.repository";
+import { ItemsListCacheInvalidatorAdapter } from "./adapters/driven/cache/items-list-cache-invalidator.adapter";
+import { RabbitMqUserEventsAdapter } from "./adapters/driving/messaging/rabbitmq-user-events.adapter";
 import { CreateItemUseCase } from "./application/use-cases/create-item.use-case";
 import { ListItemsUseCase } from "./application/use-cases/list-items.use-case";
 import { HandleUserCreatedUseCase } from "./application/use-cases/handle-user-created.use-case";
-import { ItemController } from "./infrastructure/adapters/in/http/item.controller";
-import { createItemRoutes } from "./infrastructure/adapters/in/http/routes";
-import { mapApplicationErrorToHttp } from "./infrastructure/adapters/in/http/error-to-http.mapper";
+import { ItemController } from "./adapters/driving/http/item.controller";
+import { createItemRoutes } from "./adapters/driving/http/routes";
+import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
 
 export interface CatalogContainerConfig {
   databaseUrl: string;

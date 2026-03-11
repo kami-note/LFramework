@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
 import { User } from "../../domain/entities/user.entity";
 import { Email } from "../../domain/value-objects/email.vo";
-import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
-import type { IUserRegistrationPersistence } from "../../domain/repository-interfaces/user-registration-persistence.interface";
+import type { IUserRepository } from "../ports/user-repository.port";
+import type { IUserRegistrationPersistence } from "../ports/user-registration-persistence.port";
 import type { IPasswordHasher } from "../ports/password-hasher.port";
 import type { ITokenService } from "../ports/token-service.port";
 import type { IUserCreatedNotifier } from "../ports/user-created-notifier.port";

@@ -1,4 +1,4 @@
-import type { IUserRepository } from "../../domain/repository-interfaces/user-repository.interface";
+import type { IUserRepository } from "../ports/user-repository.port";
 import type { ICacheService } from "@lframework/shared";
 import { userResponseDtoSchema, type UserResponseDto } from "../dtos/user-response.dto";
 

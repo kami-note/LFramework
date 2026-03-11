@@ -2,25 +2,24 @@
 
 Microserviço de **identidade**: usuários, autenticação (email/senha e OAuth Google/GitHub), JWT e publicação do evento `user.created`.
 
-## Estrutura (resumo)
+## Structure (summary)
 
-- **domain/** — `User`, value objects (ex.: Email), interfaces de repositório e persistência OAuth.
-- **application/** — Use cases (register, login, get-current-user, oauth-callback, create-user, get-user-by-id), portas (hasher, token, cache, event publisher, OAuth provider), DTOs (register, login, create-user, auth-response, oauth-callback-query).
-- **infrastructure/** — Controllers (auth, user), validação (auth.validation, user.validation), middleware (auth, rate limit, request-id), persistência (Prisma: user, auth_credentials, oauth_accounts), mensageria (RabbitMQ publisher), auth (JWT, Argon2, Google/GitHub OAuth).
+- **domain/** — `User`, value objects (e.g. Email), domain types (e.g. OAuthProvider). No I/O interfaces.
+- **application/** — Use cases (register, login, get-current-user, oauth-callback, create-user, get-user-by-id), **all ports** (repositories, hasher, token, cache, event publisher, OAuth provider), DTOs (register, login, create-user, auth-response, oauth-callback-query).
+- **adapters/** — **Driving:** HTTP (auth, user controllers, validation, routes), **Driven:** persistence (Prisma), messaging (RabbitMQ publisher), notifiers, auth (JWT, Argon2, Google/GitHub OAuth).
 
 Composition root: `src/container.ts`. Entry: `src/index.ts`.
 
-## Onde achar as coisas
+## Where to find things
 
-| O quê | Onde |
-|------|------|
-| Entidades e value objects | `src/domain/entities/`, `src/domain/value-objects/` |
-| Interfaces de repositório | `src/domain/repository-interfaces/` |
+| What | Where |
+|------|-------|
+| Entities and value objects | `src/domain/entities/`, `src/domain/value-objects/` |
+| Repository and other ports | `src/application/ports/` |
 | Use cases | `src/application/use-cases/` |
-| Portas | `src/application/ports/` |
-| DTOs (entrada/saída, erros) | `src/application/dtos/` (auth-common.schema, register, login, create-user, auth-response, oauth-callback-query) |
-| Rotas e controllers | `src/infrastructure/http/` (auth.routes, auth.controller, user.controller, routes.ts) |
-| Persistência | `src/infrastructure/persistence/` |
+| DTOs (input/output, errors) | `src/application/dtos/` |
+| Routes and controllers | `src/adapters/driving/http/` (auth.routes, auth.controller, user.controller, routes.ts) |
+| Persistence | `src/adapters/driven/persistence/` |
 | Composition root | `src/container.ts` |
 
 ## Documentação geral

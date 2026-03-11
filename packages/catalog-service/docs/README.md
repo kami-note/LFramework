@@ -2,26 +2,25 @@
 
 Microserviço de **catálogo**: itens (CRUD), cache Redis e consumo do evento `user.created` (invalidação de cache por usuário).
 
-## Estrutura (resumo)
+## Structure (summary)
 
-- **domain/** — `Item`, value objects (ex.: Money), interfaces de repositório.
-- **application/** — Use cases (create-item, list-items, handle-user-created), portas (cache, event consumer), DTOs (create-item, item-response).
-- **infrastructure/** — Controller (item), validação (item.validation), persistência (Prisma), mensageria (RabbitMQ consumer UserCreated), auth middleware (JWT).
+- **domain/** — `Item`, value objects (e.g. Money), domain types. No I/O interfaces.
+- **application/** — Use cases (create-item, list-items, handle-user-created), **all ports** (item repository, cache invalidator, event consumer), DTOs (create-item, item-response).
+- **adapters/** — **Driving:** HTTP (item controller, validation, routes), messaging (RabbitMQ UserCreated consumer). **Driven:** persistence (Prisma), cache invalidator, auth (JWT from shared).
 
 Composition root: `src/container.ts`. Entry: `src/index.ts`.
 
-## Onde achar as coisas
+## Where to find things
 
-| O quê | Onde |
-|------|------|
-| Entidades e value objects | `src/domain/entities/`, `src/domain/value-objects/` |
-| Interfaces de repositório | `src/domain/repository-interfaces/` |
+| What | Where |
+|------|-------|
+| Entities and value objects | `src/domain/entities/`, `src/domain/value-objects/` |
+| Repository and other ports | `src/application/ports/` |
 | Use cases | `src/application/use-cases/` |
-| Portas | `src/application/ports/` |
 | DTOs | `src/application/dtos/` (create-item, item-response) |
-| Rotas e controllers | `src/infrastructure/http/` (routes.ts, item.controller, item.validation) |
-| Persistência | `src/infrastructure/persistence/` |
-| Consumer UserCreated | `src/infrastructure/messaging/rabbitmq-user-created.consumer.ts` |
+| Routes and controllers | `src/adapters/driving/http/` (routes.ts, item.controller, item.validation) |
+| Persistence | `src/adapters/driven/persistence/` |
+| UserCreated consumer | `src/adapters/driving/messaging/rabbitmq-user-created.consumer.ts` |
 | Composition root | `src/container.ts` |
 
 ## Documentação geral

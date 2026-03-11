@@ -1,4 +1,4 @@
-import type { IItemRepository } from "../../domain/repository-interfaces/item-repository.interface";
+import type { IItemRepository } from "../ports/item-repository.port";
 import type { ICacheService } from "@lframework/shared";
 import { itemResponseDtoSchema, type ItemResponseDto } from "../dtos/item-response.dto";
 import { z } from "zod";
