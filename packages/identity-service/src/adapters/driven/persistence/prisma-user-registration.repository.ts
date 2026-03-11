@@ -1,5 +1,7 @@
+import { randomUUID } from "crypto";
 import { PrismaClient } from "../../../../generated/prisma-client";
 import type { IUserRegistrationPersistence } from "../../../application/ports/user-registration-persistence.port";
+import type { OutboxEvent } from "../../../application/ports/outbox-writer.port";
 import { User } from "../../../domain/entities/user.entity";
 import { UserAlreadyExistsError } from "../../../application/errors";
 
@@ -9,13 +11,18 @@ function isPrismaP2002(err: unknown): boolean {
 
 /**
  * Adapter: persiste usuário e credencial em uma única transação.
+ * Optionally appends an outbox event in the same transaction (Outbox Pattern).
  */
 export class PrismaUserRegistrationPersistence implements IUserRegistrationPersistence {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async saveUserAndCredential(user: User, passwordHash: string): Promise<void> {
+  async saveUserAndCredential(
+    user: User,
+    passwordHash: string,
+    outboxEvent?: OutboxEvent
+  ): Promise<void> {
     try {
-      await this.prisma.$transaction([
+      const ops: Promise<unknown>[] = [
         this.prisma.userModel.upsert({
           where: { id: user.id },
           create: {
@@ -35,7 +42,20 @@ export class PrismaUserRegistrationPersistence implements IUserRegistrationPersi
           create: { userId: user.id, passwordHash },
           update: { passwordHash },
         }),
-      ]);
+      ];
+      if (outboxEvent) {
+        ops.push(
+          this.prisma.outboxModel.create({
+            data: {
+              id: randomUUID(),
+              eventName: outboxEvent.eventName,
+              payload: outboxEvent.payload as object,
+              createdAt: new Date(),
+            },
+          })
+        );
+      }
+      await this.prisma.$transaction(ops);
     } catch (err) {
       if (isPrismaP2002(err)) {
         throw new UserAlreadyExistsError("User with this email already exists");

@@ -5,6 +5,7 @@ import type { UserCreatedPayload } from "@lframework/shared";
 import type { ICacheService } from "@lframework/shared";
 import { RedisCacheAdapter, createAuthMiddleware, JwtTokenVerifier } from "@lframework/shared";
 import { PrismaItemRepository } from "./adapters/driven/persistence/prisma-item.repository";
+import { PrismaReplicatedUserStore } from "./adapters/driven/persistence/prisma-replicated-user.store";
 import { ItemsListCacheInvalidatorAdapter } from "./adapters/driven/cache/items-list-cache-invalidator.adapter";
 import { RabbitMqUserEventsAdapter } from "./adapters/driving/messaging/rabbitmq-user-events.adapter";
 import { CreateItemUseCase } from "./application/use-cases/create-item.use-case";
@@ -38,6 +39,7 @@ interface CatalogCradle {
   redis: Redis;
   cache: ICacheService;
   itemRepository: PrismaItemRepository;
+  replicatedUserStore: PrismaReplicatedUserStore;
   itemsListCacheInvalidator: ItemsListCacheInvalidatorAdapter;
   createItemUseCase: CreateItemUseCase;
   listItemsUseCase: ListItemsUseCase;
@@ -79,6 +81,9 @@ export function createContainer(config: CatalogContainerConfig) {
     itemRepository: asFunction(
       (cradle: CatalogCradle) => new PrismaItemRepository(cradle.prisma)
     ).singleton(),
+    replicatedUserStore: asFunction(
+      (cradle: CatalogCradle) => new PrismaReplicatedUserStore(cradle.prisma)
+    ).singleton(),
     itemsListCacheInvalidator: asFunction(
       (cradle: CatalogCradle) =>
         new ItemsListCacheInvalidatorAdapter(cradle.cache)
@@ -94,7 +99,7 @@ export function createContainer(config: CatalogContainerConfig) {
     ).singleton(),
     handleUserCreatedUseCase: asFunction(
       (cradle: CatalogCradle) =>
-        new HandleUserCreatedUseCase(cradle.cache)
+        new HandleUserCreatedUseCase(cradle.replicatedUserStore, cradle.cache)
     ).singleton(),
 
     itemController: asFunction(

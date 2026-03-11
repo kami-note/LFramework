@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { User } from "../../domain/entities/user.entity";
 import { Email } from "../../domain/value-objects/email.vo";
+import { USER_CREATED_EVENT } from "@lframework/shared";
 import type { IUserRepository } from "../ports/user-repository.port";
 import type { IOAuthAccountRepository } from "../ports/oauth-account-repository.port";
 import type { IUserOAuthRegistrationPersistence } from "../ports/user-oauth-registration-persistence.port";
@@ -66,7 +67,16 @@ export class OAuthCallbackUseCase {
       await this.userOAuthRegistrationPersistence.saveUserAndOAuthAccount(
         user,
         provider.provider,
-        userInfo.providerId
+        userInfo.providerId,
+        {
+          eventName: USER_CREATED_EVENT,
+          payload: {
+            userId: user.id,
+            email: user.email.value,
+            name: user.name,
+            occurredAt: user.createdAt.toISOString(),
+          },
+        }
       );
 
       await this.userCreatedNotifier.notify({

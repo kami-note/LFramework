@@ -65,6 +65,8 @@ async function bootstrap() {
   });
 
   await container.connectRabbitMQ();
+  const outboxRelayIntervalMs = parseInt(process.env.OUTBOX_RELAY_INTERVAL_MS ?? "2000", 10);
+  container.startOutboxRelay(Number.isInteger(outboxRelayIntervalMs) && outboxRelayIntervalMs > 0 ? outboxRelayIntervalMs : 2000);
 
   const app = createApp(container, {
     corsOrigin: process.env.CORS_ORIGIN,

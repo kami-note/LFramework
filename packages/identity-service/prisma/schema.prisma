@@ -40,3 +40,15 @@ model OAuthAccountModel {
   @@unique([provider, providerId])
   @@map("oauth_accounts")
 }
+
+// Outbox table for reliable event publishing (Outbox Pattern). Rows are published by the outbox relay.
+model OutboxModel {
+  id         String   @id @default(uuid())
+  eventName  String   @map("event_name")
+  payload    Json     @db.JsonB
+  createdAt  DateTime @map("created_at")
+  publishedAt DateTime? @map("published_at")
+
+  @@index([publishedAt])
+  @@map("outbox")
+}

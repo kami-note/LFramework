@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { User } from "../../domain/entities/user.entity";
 import { Email } from "../../domain/value-objects/email.vo";
+import { USER_CREATED_EVENT } from "@lframework/shared";
 import type { IUserRepository } from "../ports/user-repository.port";
 import type { IUserRegistrationPersistence } from "../ports/user-registration-persistence.port";
 import type { IPasswordHasher } from "../ports/password-hasher.port";
@@ -51,7 +52,15 @@ export class RegisterUseCase {
     const user = User.create(id, email, dto.name);
     const passwordHash = await this.passwordHasher.hash(dto.password);
 
-    await this.registrationPersistence.saveUserAndCredential(user, passwordHash);
+    await this.registrationPersistence.saveUserAndCredential(user, passwordHash, {
+      eventName: USER_CREATED_EVENT,
+      payload: {
+        userId: user.id,
+        email: user.email.value,
+        name: user.name,
+        occurredAt: user.createdAt.toISOString(),
+      },
+    });
 
     await this.userCreatedNotifier.notify({
       id: user.id,

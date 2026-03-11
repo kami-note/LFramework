@@ -65,11 +65,28 @@ Each microservice in `packages/<name>-service/` follows the same division:
 
 ---
 
-## 6. Eventos entre serviços
+## 6. Event-driven, Outbox Pattern e replicação de dados
 
-- O **Identity** publica o evento `user.created` no RabbitMQ quando um usuário é criado (registro ou OAuth).
-- O **Catalog** consome esse evento (fila dedicada), valida o payload (sem confiar no publisher) com os mesmos critérios de nome/email/occurredAt e reage (ex.: invalidar cache do usuário).
-- Contratos de eventos, payloads e constantes RabbitMQ ficam em `packages/shared`.
+### 6.1 Comunicação orientada a eventos
+
+- Os serviços se comunicam por **eventos** via RabbitMQ (exchanges e filas definidos em `packages/shared`).
+- O **Identity** é a fonte de `user.created`; o **Catalog** (e outros consumidores) assinam e reagem.
+- Produtores nunca chamam consumidores diretamente; consumidores reagem de forma assíncrona. O contrato (formato do payload, nomes dos eventos) fica no shared.
+
+### 6.2 Outbox Pattern (publicação confiável)
+
+- Para evitar perda de eventos quando o broker de mensagens está indisponível ou o processo cai após escrever no banco, é usado o **Outbox Pattern**.
+- Quando um usuário é criado (Register, OAuth, CreateUser), a **mesma transação de banco** que persiste o usuário (e credencial/OAuth quando aplicável) também **insere uma linha** na tabela `outbox` (nome do evento + payload).
+- Um **outbox relay** separado (em processo, rodando em timer) lê linhas não publicadas (`published_at` é null), publica cada uma no RabbitMQ e marca a linha como publicada.
+- Resultado: entrega **at-least-once** e **sem perda de eventos** se o broker estiver temporariamente indisponível. O relay tenta de novo na próxima execução para qualquer linha que falhou ao publicar.
+
+**Identity service:** `OutboxModel` no Prisma; `OutboxRelayAdapter` em `adapters/driven/messaging`; relay iniciado após `connectRabbitMQ()` (configurável via `OUTBOX_RELAY_INTERVAL_MS`).
+
+### 6.3 Replicação de dados
+
+- Consumidores podem manter um **modelo de leitura local** (dados replicados) atualizado a partir dos eventos, permitindo consultas sem chamar o serviço de origem.
+- O **Catalog** replica dados de usuário: em `user.created` faz **upsert** em `replicated_users` (id, email, name, createdAt, lastEventAt) e invalida cache. Isso é **replicação de dados orientada a eventos**.
+- A fonte da verdade permanece no Identity; a tabela replicada do Catalog é eventualmente consistente e usada apenas para leituras locais.
 
 ---
 

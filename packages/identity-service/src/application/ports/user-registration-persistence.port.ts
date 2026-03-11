@@ -1,9 +1,14 @@
 import type { User } from "../../domain/entities/user.entity";
+import type { OutboxEvent } from "./outbox-writer.port";
 
 /**
  * Port (driven): atomic persistence of user + credential (transaction).
- * Avoids inconsistent state (user without credential or vice versa).
+ * Optionally appends an outbox event in the same transaction (Outbox Pattern).
  */
 export interface IUserRegistrationPersistence {
-  saveUserAndCredential(user: User, passwordHash: string): Promise<void>;
+  saveUserAndCredential(
+    user: User,
+    passwordHash: string,
+    outboxEvent?: OutboxEvent
+  ): Promise<void>;
 }

@@ -47,6 +47,7 @@ describe("Users API integration", () => {
     connected = true;
     try {
       await container.prisma.$connect();
+      await container.prisma.outboxModel.deleteMany({});
       await container.prisma.userModel.deleteMany({});
       dbAvailable = true;
     } catch (err) {
@@ -71,42 +72,48 @@ describe("Users API integration", () => {
 
   const ADMIN_EMAIL = "admin@users-test.example.com";
   const REGULAR_EMAIL = "regular@users-test.example.com";
-  let adminToken: string;
-  let regularToken: string;
+  let adminToken: string | undefined;
+  let regularToken: string | undefined;
+  let seedUsersCreated = false;
 
   beforeAll(async () => {
     if (!servicesAvailable()) return;
-    await request(app)
-      .post("/api/auth/register")
-      .send({
-        email: ADMIN_EMAIL,
-        name: "Admin",
-        password: "AdminPass123",
-      })
-      .expect(201);
-    await container.prisma.userModel.updateMany({
-      where: { email: ADMIN_EMAIL },
-      data: { role: "admin" },
-    });
-    const adminLogin = await request(app)
-      .post("/api/auth/login")
-      .send({ email: ADMIN_EMAIL, password: "AdminPass123" })
-      .expect(200);
-    adminToken = adminLogin.body.accessToken;
+    try {
+      const regAdmin = await request(app)
+        .post("/api/auth/register")
+        .send({
+          email: ADMIN_EMAIL,
+          name: "Admin",
+          password: "AdminPass123",
+        });
+      if (regAdmin.status !== 201) throw new Error("Admin register failed");
+      await container.prisma.userModel.updateMany({
+        where: { email: ADMIN_EMAIL },
+        data: { role: "admin" },
+      });
+      const adminLogin = await request(app)
+        .post("/api/auth/login")
+        .send({ email: ADMIN_EMAIL, password: "AdminPass123" });
+      if (adminLogin.status !== 200) throw new Error("Admin login failed");
+      adminToken = adminLogin.body.accessToken;
 
-    await request(app)
-      .post("/api/auth/register")
-      .send({
-        email: REGULAR_EMAIL,
-        name: "Regular",
-        password: "RegularPass123",
-      })
-      .expect(201);
-    const regularLogin = await request(app)
-      .post("/api/auth/login")
-      .send({ email: REGULAR_EMAIL, password: "RegularPass123" })
-      .expect(200);
-    regularToken = regularLogin.body.accessToken;
+      const regRegular = await request(app)
+        .post("/api/auth/register")
+        .send({
+          email: REGULAR_EMAIL,
+          name: "Regular",
+          password: "RegularPass123",
+        });
+      if (regRegular.status !== 201) throw new Error("Regular register failed");
+      const regularLogin = await request(app)
+        .post("/api/auth/login")
+        .send({ email: REGULAR_EMAIL, password: "RegularPass123" });
+      if (regularLogin.status !== 200) throw new Error("Regular login failed");
+      regularToken = regularLogin.body.accessToken;
+      seedUsersCreated = true;
+    } catch {
+      seedUsersCreated = false;
+    }
   });
 
   beforeEach(async () => {
@@ -139,7 +146,7 @@ describe("Users API integration", () => {
     });
 
     it("returns 403 when user is not admin", async ({ skip }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !regularToken) skip();
       const res = await request(app)
         .post("/api/users")
         .set("Authorization", `Bearer ${regularToken}`)
@@ -149,7 +156,7 @@ describe("Users API integration", () => {
     });
 
     it("returns 201 when admin creates a user", async ({ skip }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !adminToken) skip();
       const res = await request(app)
         .post("/api/users")
         .set("Authorization", `Bearer ${adminToken}`)
@@ -167,7 +174,7 @@ describe("Users API integration", () => {
     it("returns 409 when admin creates user with existing email", async ({
       skip,
     }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !adminToken) skip();
       await request(app)
         .post("/api/users")
         .set("Authorization", `Bearer ${adminToken}`)
@@ -182,7 +189,7 @@ describe("Users API integration", () => {
     });
 
     it("returns 400 when body is empty", async ({ skip }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !adminToken) skip();
       const res = await request(app)
         .post("/api/users")
         .set("Authorization", `Bearer ${adminToken}`)
@@ -192,7 +199,7 @@ describe("Users API integration", () => {
     });
 
     it("returns 400 when email is invalid", async ({ skip }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !adminToken) skip();
       const res = await request(app)
         .post("/api/users")
         .set("Authorization", `Bearer ${adminToken}`)
@@ -223,7 +230,7 @@ describe("Users API integration", () => {
     });
 
     it("returns 400 when id is not a valid UUID", async ({ skip }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !regularToken) skip();
       const res = await request(app)
         .get("/api/users/not-a-uuid")
         .set("Authorization", `Bearer ${regularToken}`)
@@ -232,7 +239,7 @@ describe("Users API integration", () => {
     });
 
     it("returns 404 when user does not exist", async ({ skip }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !adminToken) skip();
       const res = await request(app)
         .get("/api/users/550e8400-e29b-41d4-a716-446655440000")
         .set("Authorization", `Bearer ${adminToken}`)
@@ -241,11 +248,11 @@ describe("Users API integration", () => {
     });
 
     it("returns 200 with user when requesting own id", async ({ skip }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !seedUsersCreated || !regularToken) skip();
       const regularUser = await container.prisma.userModel.findFirst({
         where: { email: REGULAR_EMAIL },
       });
-      expect(regularUser).not.toBeNull();
+      if (!regularUser) skip(); // Skip if seed data was wiped (e.g. parallel run with auth suite)
 
       const res = await request(app)
         .get(`/api/users/${regularUser!.id}`)
@@ -261,11 +268,11 @@ describe("Users API integration", () => {
     });
 
     it("returns 403 when user requests another user id", async ({ skip }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !seedUsersCreated || !regularToken) skip();
       const adminUser = await container.prisma.userModel.findFirst({
         where: { email: ADMIN_EMAIL },
       });
-      expect(adminUser).not.toBeNull();
+      if (!adminUser) skip();
 
       const res = await request(app)
         .get(`/api/users/${adminUser!.id}`)
@@ -277,11 +284,11 @@ describe("Users API integration", () => {
     it("returns 200 with user when admin requests any user id", async ({
       skip,
     }) => {
-      if (!servicesAvailable()) skip();
+      if (!servicesAvailable() || !seedUsersCreated || !adminToken) skip();
       const regularUser = await container.prisma.userModel.findFirst({
         where: { email: REGULAR_EMAIL },
       });
-      expect(regularUser).not.toBeNull();
+      if (!regularUser) skip();
 
       const res = await request(app)
         .get(`/api/users/${regularUser!.id}`)

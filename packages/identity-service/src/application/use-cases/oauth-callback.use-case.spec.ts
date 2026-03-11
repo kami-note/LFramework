@@ -110,6 +110,37 @@ describe("OAuthCallbackUseCase", () => {
     expect(userCreatedNotifier.notify).toHaveBeenCalledTimes(1);
   });
 
+  it("deve passar outboxEvent para saveUserAndOAuthAccount quando novo usuário (Outbox Pattern)", async () => {
+    vi.mocked(provider.getUserInfoFromCode).mockResolvedValue({
+      providerId: "github-789",
+      email: "oauth-new@example.com",
+      name: "OAuth New",
+    });
+    vi.mocked(oauthAccountRepository.findByProviderAndProviderId).mockResolvedValue(null);
+    vi.mocked(userRepository.findByEmail).mockResolvedValue(null);
+
+    const useCase = new OAuthCallbackUseCase(
+      userRepository,
+      oauthAccountRepository,
+      userOAuthRegistrationPersistence,
+      tokenService,
+      userCreatedNotifier
+    );
+    await useCase.execute("code", "http://localhost/callback", provider);
+
+    const saveCall = vi.mocked(userOAuthRegistrationPersistence.saveUserAndOAuthAccount).mock.calls[0];
+    expect(saveCall).toHaveLength(4);
+    const [, , , outboxEvent] = saveCall;
+    expect(outboxEvent).toBeDefined();
+    expect(outboxEvent!.eventName).toBe("user.created");
+    expect(outboxEvent!.payload).toMatchObject({
+      userId: expect.any(String),
+      email: "oauth-new@example.com",
+      name: "OAuth New",
+      occurredAt: expect.any(String),
+    });
+  });
+
   it("deve lançar quando getUserInfoFromCode retorna null", async () => {
     vi.mocked(provider.getUserInfoFromCode).mockResolvedValue(null);
 

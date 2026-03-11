@@ -8,6 +8,7 @@ import { PrismaUserRegistrationPersistence } from "./adapters/driven/persistence
 import { PrismaUserOAuthRegistrationPersistence } from "./adapters/driven/persistence/prisma-user-oauth-registration.repository";
 import { PrismaOAuthAccountRepository } from "./adapters/driven/persistence/prisma-oauth-account.repository";
 import { RabbitMqEventPublisherAdapter } from "./adapters/driven/messaging/rabbitmq-event-publisher.adapter";
+import { OutboxRelayAdapter } from "./adapters/driven/messaging/outbox-relay.adapter";
 import type { IEventPublisher } from "./application/ports/event-publisher.port";
 import { UserCreatedNotifierAdapter } from "./adapters/driven/notifiers/user-created-notifier.adapter";
 import { JwtTokenService } from "./adapters/driven/auth/jwt-token.service";
@@ -79,6 +80,7 @@ interface IdentityCradle {
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
   userRoutes: ReturnType<typeof createUserRoutes>;
   authRoutes: ReturnType<typeof createAuthRoutes>;
+  outboxRelay: OutboxRelayAdapter;
 }
 
 /**
@@ -131,6 +133,11 @@ export function createContainer(config: ContainerConfig) {
         config.eventPublisherOverride ?? new RabbitMqEventPublisherAdapter(config.rabbitmqUrl)
     ).singleton(),
 
+    outboxRelay: asFunction(
+      (cradle: IdentityCradle) =>
+        new OutboxRelayAdapter(cradle.prisma, cradle.eventPublisher)
+    ).singleton(),
+
     tokenService: asFunction(({ config }: { config: ContainerConfig }) => {
       return new JwtTokenService({
         secret: config.jwtSecret,
@@ -157,7 +164,7 @@ export function createContainer(config: ContainerConfig) {
 
     userCreatedNotifier: asFunction(
       (cradle: IdentityCradle) =>
-        new UserCreatedNotifierAdapter(cradle.eventPublisher, cradle.cache)
+        new UserCreatedNotifierAdapter(cradle.cache)
     ).singleton(),
 
     createUserUseCase: asFunction(
@@ -273,7 +280,11 @@ export function createContainer(config: ContainerConfig) {
       const ep = c.eventPublisher as { connect?: () => Promise<void> };
       if (ep.connect) await ep.connect();
     },
+    startOutboxRelay(intervalMs: number = 2_000): void {
+      c.outboxRelay.start(intervalMs);
+    },
     async disconnect(): Promise<void> {
+      c.outboxRelay.stop();
       const ep = c.eventPublisher as { disconnect?: () => Promise<void> };
       if (ep.disconnect) await ep.disconnect();
       await c.prisma.$disconnect();

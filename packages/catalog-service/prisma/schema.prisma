@@ -17,3 +17,15 @@ model ItemModel {
 
   @@map("items")
 }
+
+// Data replication: local read model for users (source: Identity service via user.created events).
+model ReplicatedUserModel {
+  id                   String    @id
+  email                String
+  name                 String
+  createdAt            DateTime  @map("created_at")
+  lastEventAt          DateTime  @map("last_event_at")
+  lastEventOccurredAt  DateTime? @map("last_event_occurred_at")
+
+  @@map("replicated_users")
+}

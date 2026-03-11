@@ -64,6 +64,35 @@ describe("RegisterUseCase", () => {
     expect(userCreatedNotifier.notify).toHaveBeenCalled();
   });
 
+  it("deve passar outboxEvent para saveUserAndCredential (Outbox Pattern)", async () => {
+    const useCase = new RegisterUseCase(
+      userRepository,
+      registrationPersistence,
+      passwordHasher,
+      tokenService,
+      userCreatedNotifier
+    );
+    const dto = {
+      email: "outbox@example.com",
+      name: "Outbox User",
+      password: "pass123",
+    };
+
+    await useCase.execute(dto);
+
+    const saveCall = vi.mocked(registrationPersistence.saveUserAndCredential).mock.calls[0];
+    expect(saveCall).toHaveLength(3);
+    const [, , outboxEvent] = saveCall;
+    expect(outboxEvent).toBeDefined();
+    expect(outboxEvent!.eventName).toBe("user.created");
+    expect(outboxEvent!.payload).toMatchObject({
+      userId: expect.any(String),
+      email: "outbox@example.com",
+      name: "Outbox User",
+      occurredAt: expect.any(String),
+    });
+  });
+
   it("deve lançar UserAlreadyExistsError quando o email já existe", async () => {
     const existing = User.reconstitute(
       "existing-id",

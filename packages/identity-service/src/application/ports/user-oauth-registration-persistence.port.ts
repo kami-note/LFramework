@@ -1,14 +1,16 @@
 import type { User } from "../../domain/entities/user.entity";
 import type { OAuthProvider } from "../../domain/types";
+import type { OutboxEvent } from "./outbox-writer.port";
 
 /**
  * Port (driven): atomic persistence of user + OAuth account (transaction).
- * Used in OAuth callback when user is new (avoids user without oauth_account).
+ * Optionally appends an outbox event in the same transaction (Outbox Pattern).
  */
 export interface IUserOAuthRegistrationPersistence {
   saveUserAndOAuthAccount(
     user: User,
     provider: OAuthProvider,
-    providerId: string
+    providerId: string,
+    outboxEvent?: OutboxEvent
   ): Promise<void>;
 }

@@ -27,12 +27,23 @@ Este documento descreve padrões usados no LFramework para manter consistência 
 
 | Serviço   | Porta                       | Adapter                                      | Use cases que usam        |
 |----------|-----------------------------|----------------------------------------------|----------------------------|
-| identity | `IUserCreatedNotifier`      | `UserCreatedNotifierAdapter`                  | Register, CreateUser, OAuthCallback |
+| identity | `IUserCreatedNotifier`      | `UserCreatedNotifierAdapter` (cache only; events via Outbox) | Register, CreateUser, OAuthCallback |
 | catalog  | `IItemsListCacheInvalidator`| `ItemsListCacheInvalidatorAdapter`           | CreateItem                 |
+| catalog  | `IReplicatedUserStore`      | `PrismaReplicatedUserStore` (data replication from user.created) | HandleUserCreatedUseCase  |
 
 ---
 
-## 2. Error-to-HTTP mapper (SRP / DRY)
+## 2. Outbox Pattern (reliable event publishing)
+
+**Ideia:** Write the event to an **outbox table** in the **same transaction** as the business data. A relay process later reads unpublished rows and publishes to the message broker, then marks them as published. This guarantees no event is lost if the broker is down or the process crashes after the DB commit.
+
+**Como está implementado:**
+
+- **Identity:** table `outbox` (id, event_name, payload, created_at, published_at). Register, OAuth and CreateUser persist user (and credential/OAuth when applicable) **and** one outbox row in a single transaction. `OutboxRelayAdapter` runs periodically (e.g. every 2s), publishes to RabbitMQ and sets `published_at`. Port: `OutboxEvent` type; persistence ports accept optional `outboxEvent`; `IUserRepository.saveUserAndOutbox` for CreateUser.
+
+---
+
+## 3. Error-to-HTTP mapper (SRP / DRY)
 
 **Ideia:** A decisão “qual erro de aplicação vira qual status HTTP” fica em **um único lugar** por serviço. Controllers só chamam o use case, em caso de erro chamam o mapeador e depois `sendError(res, statusCode, message)`.
 
@@ -57,7 +68,7 @@ O **tipo** `HttpErrorMapping` e a **factory** `createErrorToHttpMapper` ficam no
 
 ---
 
-## 3. Validação de body (createValidateBody)
+## 4. Validação de body (createValidateBody)
 
 **Ideia:** O shared oferece `createValidateBody(schema)` (Zod). O middleware valida `req.body`; em sucesso atribui o resultado a `req.body` e chama `next()`; em falha chama `sendValidationError(res, result.error)`. Deve ser usado após `express.json()`; se `req.body` for undefined, é tratado como `{}`.
 
@@ -65,7 +76,7 @@ O **tipo** `HttpErrorMapping` e a **factory** `createErrorToHttpMapper` ficam no
 
 ---
 
-## 4. Resumo: checklist para novo use case ou novo serviço
+## 5. Resumo: checklist para novo use case ou novo serviço
 
 - [ ] Use case recebe apenas **portas** (interfaces) no construtor; nenhuma implementação concreta de infra.
 - [ ] Efeitos colaterais (evento, cache, etc.) atrás de uma **porta** com nome claro; adapter em infrastructure.

@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HandleUserCreatedUseCase } from "./handle-user-created.use-case";
 import type { ICacheService } from "@lframework/shared";
+import type { IReplicatedUserStore } from "../ports/replicated-user-store.port";
 
 describe("HandleUserCreatedUseCase", () => {
+  let replicatedUserStore: IReplicatedUserStore;
   let cache: ICacheService;
 
   beforeEach(() => {
+    replicatedUserStore = {
+      upsertFromUserCreated: vi.fn().mockResolvedValue(undefined),
+    };
     cache = {
       get: vi.fn(),
       set: vi.fn().mockResolvedValue(undefined),
@@ -13,8 +18,8 @@ describe("HandleUserCreatedUseCase", () => {
     };
   });
 
-  it("deve chamar cache.delete com chave user:{userId} ao receber payload", async () => {
-    const useCase = new HandleUserCreatedUseCase(cache);
+  it("deve replicar usuário e chamar cache.delete com chave user:{userId} ao receber payload", async () => {
+    const useCase = new HandleUserCreatedUseCase(replicatedUserStore, cache);
     const payload = {
       userId: "user-abc",
       email: "u@example.com",
@@ -24,12 +29,13 @@ describe("HandleUserCreatedUseCase", () => {
 
     await useCase.execute(payload);
 
+    expect(replicatedUserStore.upsertFromUserCreated).toHaveBeenCalledWith(payload);
     expect(cache.delete).toHaveBeenCalledTimes(1);
     expect(cache.delete).toHaveBeenCalledWith("user:user-abc");
   });
 
-  it("deve executar sem lançar quando cache.delete resolve", async () => {
-    const useCase = new HandleUserCreatedUseCase(cache);
+  it("deve executar sem lançar quando replication e cache.delete resolvem", async () => {
+    const useCase = new HandleUserCreatedUseCase(replicatedUserStore, cache);
     const payload = {
       userId: "outro-id",
       email: "a@b.com",
@@ -38,6 +44,7 @@ describe("HandleUserCreatedUseCase", () => {
     };
 
     await expect(useCase.execute(payload)).resolves.toBeUndefined();
+    expect(replicatedUserStore.upsertFromUserCreated).toHaveBeenCalledWith(payload);
     expect(cache.delete).toHaveBeenCalledWith("user:outro-id");
   });
 });
