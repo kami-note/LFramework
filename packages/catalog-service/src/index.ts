@@ -1,14 +1,6 @@
-import express from "express";
-import cors from "cors";
-import swaggerUi from "swagger-ui-express";
 import { createContainer } from "./container";
-import { createCatalogOpenApi } from "./openapi";
-import {
-  requestIdMiddleware,
-  createErrorHandlerMiddleware,
-  createHealthHandler,
-  logger,
-} from "@lframework/shared";
+import { createApp } from "./app";
+import { logger } from "@lframework/shared";
 
 const port = parseInt(process.env.CATALOG_SERVICE_PORT ?? "3002", 10);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -59,28 +51,10 @@ async function bootstrap() {
     container.handleUserCreatedUseCase.execute(payload)
   );
 
-  const app = express();
-  app.use(requestIdMiddleware);
-  const corsOrigin = process.env.CORS_ORIGIN;
-  if (corsOrigin) {
-    app.use(
-      cors({
-        origin: corsOrigin.split(",").map((s) => s.trim()),
-        credentials: true,
-      })
-    );
-  }
-  app.use(express.json({ limit: "512kb" }));
-
-  const openApiSpec = createCatalogOpenApi(baseUrl);
-  app.get("/api-docs.json", (_req, res) => res.json(openApiSpec));
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiSpec, { customSiteTitle: "Catalog Service API" }));
-
-  app.use("/api", container.itemRoutes);
-
-  app.get("/health", createHealthHandler("catalog-service"));
-
-  app.use(createErrorHandlerMiddleware(container.mapApplicationErrorToHttp));
+  const app = createApp(container, {
+    baseUrl,
+    corsOrigin: process.env.CORS_ORIGIN,
+  });
 
   app.listen(port, () => {
     logger.info(`Catalog service listening on http://localhost:${port}`);

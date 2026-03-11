@@ -62,4 +62,11 @@ describe("ListItemsUseCase", () => {
     expect(result).toEqual(cached);
     expect(itemRepository.findAll).not.toHaveBeenCalled();
   });
+
+  it("deve propagar erro quando repository.findAll lança", async () => {
+    vi.mocked(itemRepository.findAll).mockRejectedValue(new Error("DB error"));
+    const useCase = new ListItemsUseCase(itemRepository, cache);
+
+    await expect(useCase.execute()).rejects.toThrow("DB error");
+  });
 });

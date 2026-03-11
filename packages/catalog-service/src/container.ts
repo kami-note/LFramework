@@ -2,6 +2,7 @@ import { createContainer as createAwilixContainer, asValue, asClass, asFunction 
 import { PrismaClient } from "../generated/prisma-client";
 import Redis from "ioredis";
 import type { UserCreatedPayload } from "@lframework/shared";
+import type { ICacheService } from "@lframework/shared";
 import { RedisCacheAdapter, createAuthMiddleware, JwtTokenVerifier } from "@lframework/shared";
 import { PrismaItemRepository } from "./adapters/driven/persistence/prisma-item.repository";
 import { ItemsListCacheInvalidatorAdapter } from "./adapters/driven/cache/items-list-cache-invalidator.adapter";
@@ -13,11 +14,21 @@ import { ItemController } from "./adapters/driving/http/item.controller";
 import { createItemRoutes } from "./adapters/driving/http/routes";
 import { mapApplicationErrorToHttp } from "./adapters/driving/http/error-to-http.mapper";
 
+/** No-op event consumer for tests; when set, RabbitMQ is not used. */
+export interface TestEventConsumer {
+  start(): Promise<void>;
+  close(): Promise<void>;
+}
+
 export interface CatalogContainerConfig {
   databaseUrl: string;
   redisUrl: string;
   rabbitmqUrl: string;
   jwtSecret: string;
+  /** When set, used instead of Redis cache (e.g. no-op in integration tests). */
+  cacheOverride?: ICacheService;
+  /** When set, used instead of starting RabbitMQ consumer (e.g. no-op in integration tests). */
+  eventConsumerOverride?: TestEventConsumer;
 }
 
 /** Tipo do cradle (dependências resolvidas) para type-safety. */
@@ -25,7 +36,7 @@ interface CatalogCradle {
   config: CatalogContainerConfig;
   prisma: PrismaClient;
   redis: Redis;
-  cache: RedisCacheAdapter;
+  cache: ICacheService;
   itemRepository: PrismaItemRepository;
   itemsListCacheInvalidator: ItemsListCacheInvalidatorAdapter;
   createItemUseCase: CreateItemUseCase;
@@ -61,15 +72,35 @@ export function createContainer(config: CatalogContainerConfig) {
       });
     }).singleton(),
 
-    cache: asClass(RedisCacheAdapter).singleton(),
-    itemRepository: asClass(PrismaItemRepository).singleton(),
-    itemsListCacheInvalidator: asClass(ItemsListCacheInvalidatorAdapter).singleton(),
+    cache: asFunction(
+      ({ config, redis }: { config: CatalogContainerConfig; redis: Redis }) =>
+        config.cacheOverride ?? new RedisCacheAdapter(redis)
+    ).singleton(),
+    itemRepository: asFunction(
+      (cradle: CatalogCradle) => new PrismaItemRepository(cradle.prisma)
+    ).singleton(),
+    itemsListCacheInvalidator: asFunction(
+      (cradle: CatalogCradle) =>
+        new ItemsListCacheInvalidatorAdapter(cradle.cache)
+    ).singleton(),
 
-    createItemUseCase: asClass(CreateItemUseCase).singleton(),
-    listItemsUseCase: asClass(ListItemsUseCase).singleton(),
-    handleUserCreatedUseCase: asClass(HandleUserCreatedUseCase).singleton(),
+    createItemUseCase: asFunction(
+      (cradle: CatalogCradle) =>
+        new CreateItemUseCase(cradle.itemRepository, cradle.itemsListCacheInvalidator)
+    ).singleton(),
+    listItemsUseCase: asFunction(
+      (cradle: CatalogCradle) =>
+        new ListItemsUseCase(cradle.itemRepository, cradle.cache)
+    ).singleton(),
+    handleUserCreatedUseCase: asFunction(
+      (cradle: CatalogCradle) =>
+        new HandleUserCreatedUseCase(cradle.cache)
+    ).singleton(),
 
-    itemController: asClass(ItemController).singleton(),
+    itemController: asFunction(
+      (cradle: CatalogCradle) =>
+        new ItemController(cradle.createItemUseCase, cradle.listItemsUseCase)
+    ).singleton(),
 
     tokenVerifier: asFunction(({ config }: { config: CatalogContainerConfig }) => {
       return new JwtTokenVerifier(config.jwtSecret);
@@ -97,6 +128,7 @@ export function createContainer(config: CatalogContainerConfig) {
   });
 
   const c = awilix.cradle;
+  let activeConsumer: { close(): Promise<void> } | null = null;
 
   return {
     get prisma() {
@@ -113,11 +145,25 @@ export function createContainer(config: CatalogContainerConfig) {
       return c.handleUserCreatedUseCase;
     },
     async connectRabbitMQ(userCreatedHandler: (payload: UserCreatedPayload) => Promise<void>): Promise<void> {
-      c.eventConsumer.onUserCreated(userCreatedHandler);
-      await c.eventConsumer.start();
+      if (activeConsumer) {
+        await activeConsumer.close();
+        activeConsumer = null;
+      }
+      const config = c.config;
+      if (config.eventConsumerOverride) {
+        await config.eventConsumerOverride.start();
+        activeConsumer = config.eventConsumerOverride;
+      } else {
+        c.eventConsumer.onUserCreated(userCreatedHandler);
+        await c.eventConsumer.start();
+        activeConsumer = c.eventConsumer;
+      }
     },
     async disconnect(): Promise<void> {
-      await c.eventConsumer.close();
+      if (activeConsumer) {
+        await activeConsumer.close();
+        activeConsumer = null;
+      }
       await c.prisma.$disconnect();
       c.redis.disconnect();
     },

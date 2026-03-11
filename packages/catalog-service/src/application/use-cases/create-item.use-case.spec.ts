@@ -43,4 +43,13 @@ describe("CreateItemUseCase", () => {
     await expect(useCase.execute(dto)).rejects.toThrow(InvalidItemError);
     expect(itemRepository.save).not.toHaveBeenCalled();
   });
+
+  it("deve lançar InvalidItemError quando repository.save lança", async () => {
+    vi.mocked(itemRepository.save).mockRejectedValue(new Error("DB connection failed"));
+    const useCase = new CreateItemUseCase(itemRepository, itemsListCacheInvalidator);
+    const dto = { name: "Item", priceAmount: 100, priceCurrency: "BRL" };
+
+    await expect(useCase.execute(dto)).rejects.toThrow(InvalidItemError);
+    expect(itemRepository.save).toHaveBeenCalled();
+  });
 });
