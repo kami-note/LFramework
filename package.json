@@ -13,7 +13,8 @@
     "dev:api-docs": "pnpm --filter api-docs run dev",
     "dev": "pnpm run dev:identity & pnpm run dev:catalog & pnpm run dev:api-docs",
     "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down"
+    "docker:down": "docker-compose down",
+    "load-test": "tsx scripts/load-test.ts"
   },
   "engines": {
     "node": ">=18"
@@ -23,6 +24,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.0.3",
     "glob": "^13.0.6",
+    "tsx": "^4.21.0",
     "typescript-eslint": "^8.56.1"
   }
 }

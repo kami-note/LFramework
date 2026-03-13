@@ -22,8 +22,8 @@ export class PrismaUserRegistrationPersistence implements IUserRegistrationPersi
     outboxEvent?: OutboxEvent
   ): Promise<void> {
     try {
-      const ops: Promise<unknown>[] = [
-        this.prisma.userModel.upsert({
+      await this.prisma.$transaction(async (tx) => {
+        await tx.userModel.upsert({
           where: { id: user.id },
           create: {
             id: user.id,
@@ -36,26 +36,23 @@ export class PrismaUserRegistrationPersistence implements IUserRegistrationPersi
             email: user.email.value,
             name: user.name,
           },
-        }),
-        this.prisma.authCredentialModel.upsert({
+        });
+        await tx.authCredentialModel.upsert({
           where: { userId: user.id },
           create: { userId: user.id, passwordHash },
           update: { passwordHash },
-        }),
-      ];
-      if (outboxEvent) {
-        ops.push(
-          this.prisma.outboxModel.create({
+        });
+        if (outboxEvent) {
+          await tx.outboxModel.create({
             data: {
               id: randomUUID(),
               eventName: outboxEvent.eventName,
               payload: outboxEvent.payload as object,
               createdAt: new Date(),
             },
-          })
-        );
-      }
-      await this.prisma.$transaction(ops);
+          });
+        }
+      });
     } catch (err) {
       if (isPrismaP2002(err)) {
         throw new UserAlreadyExistsError("User with this email already exists");

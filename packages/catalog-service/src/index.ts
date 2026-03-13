@@ -1,3 +1,8 @@
+import path from "path";
+import { config as loadEnv } from "dotenv";
+
+loadEnv({ path: path.resolve(process.cwd(), ".env") });
+
 import { createContainer } from "./container";
 import { createApp } from "./app";
 import { logger } from "@lframework/shared";

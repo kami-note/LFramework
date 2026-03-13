@@ -137,9 +137,13 @@ Respostas de erro: `{ "error": "string" }`. Em 500 o cliente vê apenas "Interna
 
 Serviços no host (3001, 3002) não estão rodando ou não acessíveis. Teste: `curl http://localhost:3001/health` e `curl http://localhost:3002/health`. No Linux, confirme `host.docker.internal` no docker-compose para o Nginx.
 
-### 401 com token “válido”
+### 401 com token “válido” / JWT “invalid signature”
 
-Identity e Catalog devem usar o **mesmo** `JWT_SECRET`. Se um gera e o outro valida, o secret tem de ser idêntico em ambos.
+Identity e Catalog devem usar o **mesmo** `JWT_SECRET` (identity assina o token, catalog valida). No catalog: copie `packages/catalog-service/.env.example` para `packages/catalog-service/.env` e defina `JWT_SECRET` com o **mesmo valor** de `packages/identity-service/.env`. O catalog carrega `.env` do diretório do pacote ao iniciar.
+
+### Tabela `replicated_users` não existe (catalog)
+
+Se o catalog-service logar erro `The table public.replicated_users does not exist`, rode as migrações do catalog: `pnpm --filter catalog-service prisma:migrate` (ou `pnpm --filter catalog-service exec prisma migrate deploy` em produção).
 
 ### Porta 8080 em uso
 

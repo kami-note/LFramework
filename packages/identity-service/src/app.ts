@@ -4,6 +4,7 @@ import swaggerUi from "swagger-ui-express";
 import { createIdentityOpenApi } from "./openapi";
 import {
   requestIdMiddleware,
+  requestLoggingMiddleware,
   createErrorHandlerMiddleware,
   createHealthHandler,
 } from "@lframework/shared";
@@ -31,7 +32,10 @@ export function createApp(
   options: CreateAppOptions = {}
 ): Express {
   const app = express();
+  // When behind the API gateway (Nginx), trust X-Forwarded-For so express-rate-limit can identify clients correctly.
+  app.set("trust proxy", 1);
   app.use(requestIdMiddleware);
+  app.use(requestLoggingMiddleware);
 
   if (options.corsOrigin) {
     app.use(

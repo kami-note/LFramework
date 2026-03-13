@@ -4,6 +4,7 @@ import swaggerUi from "swagger-ui-express";
 import { createCatalogOpenApi } from "./openapi";
 import {
   requestIdMiddleware,
+  requestLoggingMiddleware,
   createErrorHandlerMiddleware,
   createHealthHandler,
 } from "@lframework/shared";
@@ -31,6 +32,7 @@ export function createApp(
 ): Express {
   const app = express();
   app.use(requestIdMiddleware);
+  app.use(requestLoggingMiddleware);
 
   if (options.corsOrigin) {
     const origins = options.corsOrigin.split(",").map((s) => s.trim()).filter(Boolean);
